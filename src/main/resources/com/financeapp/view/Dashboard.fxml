@@ -9,13 +9,12 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.Separator?>
-<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -23,259 +22,216 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="700.0" prefWidth="1200.0" stylesheets="@../../../../../../css/styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.financeapp.controller.DashboardController">
-    <children>
-        <VBox alignment="TOP_CENTER" prefHeight="700.0" prefWidth="1200.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-            <children>
-                <HBox alignment="CENTER_LEFT" prefHeight="50.0" prefWidth="200.0" spacing="20.0" style="-fx-background-color: #34495e; -fx-padding: 10px;">
-                    <children>
-                        <Label fx:id="welcomeLabel" text="Welcome, User!" textFill="WHITE">
-                            <font>
-                                <Font name="System Bold" size="18.0" />
-                            </font>
-                        </Label>
-                        <HBox alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
-                            <children>
-                                <Button mnemonicParsing="false" onAction="#handleLogout" text="Logout" />
-                            </children>
-                        </HBox>
-                    </children>
-                    <VBox.margin>
-                        <Insets />
-                    </VBox.margin>
-                    <padding>
-                        <Insets left="15.0" right="15.0" />
-                    </padding>
-                </HBox>
-                <TabPane fx:id="dashboardTabPane" prefHeight="640.0" prefWidth="1170.0" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
-                    <tabs>
-                        <Tab text="Overview">
-                            <content>
-                                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="200.0" prefWidth="200.0">
-                                    <content>
-                                        <VBox alignment="TOP_CENTER" prefHeight="700.0" prefWidth="1180.0" spacing="25.0">
-                                            <children>
-                                                <Label styleClass="label-title" text="Your Financial Snapshot" />
-                                                <GridPane hgap="40.0" vgap="15.0" alignment="CENTER">
-                                                    <columnConstraints>
-                                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="250.0" minWidth="10.0" prefWidth="200.0" />
-                                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="150.0" minWidth="10.0" prefWidth="120.0" />
-                                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="300.0" minWidth="10.0" prefWidth="250.0" />
-                                                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="250.0" minWidth="10.0" prefWidth="200.0" />
-                                                    </columnConstraints>
-                                                    <rowConstraints>
-                                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                        <RowConstraints minHeight="10.0" prefHeight="10.0" vgrow="SOMETIMES" /> <!-- Spacer row -->
-                                                    </rowConstraints>
-                                                    <children>
-                                                        <Label text="Current Month Income:" />
-                                                        <Label fx:id="totalIncomeLabel" text="₹0.00" styleClass="value-label" GridPane.columnIndex="1" />
-                                                        <Label text="Predicted Next Month Total Expenses:" GridPane.columnIndex="2" />
-                                                        <Label fx:id="totalPredictedExpenseLabel" text="₹0.00" styleClass="value-label" GridPane.columnIndex="3" />
-                                                        <Label text="Current Month Expenses:" GridPane.rowIndex="1" />
-                                                        <Label fx:id="totalExpensesLabel" text="₹0.00" styleClass="value-label" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                                        <Label text="Predicted Next Month Breakdown:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                                                        <VBox fx:id="predictedExpensesVBox" alignment="TOP_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="5.0" GridPane.columnIndex="3" GridPane.rowIndex="1" GridPane.rowSpan="3" />
-                                                        <Label text="Current Net Balance (This Month):" GridPane.rowIndex="2" />
-                                                        <Label fx:id="netBalanceLabel" text="₹0.00" styleClass="value-label" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                                                    </children>
-                                                    <padding>
-                                                        <Insets left="20.0" right="20.0" top="10.0" bottom="10.0"/>
-                                                    </padding>
-                                                </GridPane>
-                                                <Separator prefWidth="200.0" />
-                                                <Label styleClass="label-title" text="Financial Charts" />
-                                                <SplitPane dividerPositions="0.33, 0.66" prefHeight="450.0" prefWidth="1170.0" VBox.vgrow="ALWAYS">
-                                                    <items>
-                                                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                                            <children>
-                                                                <PieChart fx:id="expensePieChart" prefHeight="448.0" prefWidth="388.0" title="Expense Categories Breakdown" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
-                                                            </children>
-                                                        </AnchorPane>
-                                                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                                            <children>
-                                                                <BarChart fx:id="monthlyExpensesBarChart" prefHeight="448.0" prefWidth="388.0" title="Monthly Expenses Comparison" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                                                    <xAxis>
-                                                                        <CategoryAxis label="Month" fx:id="monthlyExpensesXAxis" />
-                                                                    </xAxis>
-                                                                    <yAxis>
-                                                                        <NumberAxis label="Amount (₹)" fx:id="monthlyExpensesYAxis" />
-                                                                    </yAxis>
-                                                                </BarChart>
-                                                            </children>
-                                                        </AnchorPane>
-                                                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                                            <children>
-                                                                <LineChart fx:id="expenseTrendsLineChart" prefHeight="448.0" prefWidth="388.0" title="Expense Trends Over Time" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                                                    <xAxis>
-                                                                        <CategoryAxis label="Date" fx:id="expenseTrendsXAxis" />
-                                                                    </xAxis>
-                                                                    <yAxis>
-                                                                        <NumberAxis label="Amount (₹)" fx:id="expenseTrendsYAxis" />
-                                                                    </yAxis>
-                                                                </LineChart>
-                                                            </children>
-                                                        </AnchorPane>
-                                                    </items>
-                                                </SplitPane>
-                                            </children>
-                                            <padding>
-                                                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-                                            </padding>
-                                        </VBox>
-                                    </content>
+<VBox prefHeight="700.0" prefWidth="1000.0" stylesheets="/css/styles.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.financeapp.controller.DashboardController">
+    <HBox alignment="CENTER_LEFT" prefHeight="50.0" styleClass="header-bar">
+        <padding>
+            <Insets left="20.0" right="20.0" />
+        </padding>
+        <Label fx:id="welcomeLabel" styleClass="welcome-label" text="Welcome, User!" />
+        <HBox HBox.hgrow="ALWAYS" />
+        <Button onAction="#handleLogout" styleClass="logout-button" text="Logout" />
+    </HBox>
+    <TabPane fx:id="dashboardTabPane" VBox.vgrow="ALWAYS">
+        <tabs>
+            <Tab text="Overview">
+                <content>
+                    <ScrollPane fitToHeight="true" fitToWidth="true" style="-fx-background-color: transparent;">
+                        <VBox alignment="TOP_CENTER" spacing="20.0" styleClass="overview-pane">
+                            <padding>
+                                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                            </padding>
+                            <GridPane hgap="20.0" vgap="15.0">
+                                <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                </columnConstraints>
+                                <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                </rowConstraints>
+                                <Label styleClass="section-title" text="Your Financial Snapshot" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="0" />
+                                <Label styleClass="section-title" text="Predicted Next Month Expenses:" GridPane.columnIndex="2" GridPane.columnSpan="2" GridPane.rowIndex="0" />
+
+                                <Label styleClass="label-bold" text="Current Month Income:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                <Label fx:id="totalIncomeLabel" styleClass="value-label" text="₹0.00" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                <Label styleClass="label-bold" text="Total Predicted Expense:" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                <Label fx:id="totalPredictedExpenseLabel" styleClass="value-label" text="₹0.00" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+
+                                <Label styleClass="label-bold" text="Current Month Expenses:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                <Label fx:id="totalExpensesLabel" styleClass="value-label" text="₹0.00" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                <Label styleClass="label-bold" text="Predicted Next Month Breakdown:" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+
+                                <Label styleClass="label-bold" text="Current Net Balance (This Month):" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                                <Label fx:id="netBalanceLabel" styleClass="value-label" text="₹0.00" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                <!-- Predicted Expenses VBox inside a ScrollPane for better handling of long lists -->
+                                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="150.0" style="-fx-background-color: transparent;" GridPane.columnIndex="3" GridPane.rowIndex="2" GridPane.rowSpan="2">
+                                    <VBox fx:id="predictedExpensesVBox" spacing="5.0" style="-fx-padding: 5;">
+                                        <!-- Predicted expense labels will be added here by controller -->
+                                    </VBox>
                                 </ScrollPane>
-                            </content>
-                        </Tab>
-                        <Tab text="Transactions List">
-                            <content>
-                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                    <children>
-                                        <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                            <children>
-                                                <Label styleClass="label-title" text="Your Transactions" />
-                                                <TableView fx:id="transactionTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                                                    <columns>
-                                                        <TableColumn fx:id="colTransDate" prefWidth="100.0" text="Date" />
-                                                        <TableColumn fx:id="colTransAmount" prefWidth="100.0" text="Amount (₹)" />
-                                                        <TableColumn fx:id="colTransType" prefWidth="100.0" text="Type" />
-                                                        <TableColumn fx:id="colTransCategory" prefWidth="120.0" text="Category" />
-                                                        <TableColumn fx:id="colTransDescription" prefWidth="250.0" text="Description" />
-                                                        <TableColumn fx:id="colTransAccount" prefWidth="100.0" text="Account" />
-                                                    </columns>
-                                                    <columnResizePolicy>
-                                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                    </columnResizePolicy>
-                                                </TableView>
-                                                <HBox alignment="CENTER" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
-                                                    <children>
-                                                        <Button mnemonicParsing="false" onAction="#handleAddTransaction" text="Add New" />
-                                                        <Button mnemonicParsing="false" onAction="#handleEditTransaction" text="Edit Selected" />
-                                                        <Button mnemonicParsing="false" onAction="#handleDeleteTransaction" text="Delete Selected" />
-                                                    </children>
-                                                </HBox>
-                                            </children>
-                                            <padding>
-                                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                            </padding>
-                                        </VBox>
-                                    </children>
-                                </AnchorPane>
-                            </content>
-                        </Tab>
-                        <Tab text="Budgeting">
-                            <content>
-                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                    <children>
-                                        <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                            <children>
-                                                <Label styleClass="label-title" text="Budget Overview" />
-                                                <TableView fx:id="budgetTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                                                    <columns>
-                                                        <TableColumn fx:id="colBudgetCategory" prefWidth="75.0" text="Category" />
-                                                        <TableColumn fx:id="colBudgetLimit" prefWidth="75.0" text="Limit (₹)" />
-                                                        <TableColumn fx:id="colBudgetMonth" prefWidth="75.0" text="Month" />
-                                                        <TableColumn fx:id="colBudgetYear" prefWidth="75.0" text="Year" />
-                                                        <TableColumn fx:id="colBudgetSpent" prefWidth="75.0" text="Spent (₹)" />
-                                                        <TableColumn fx:id="colBudgetRemaining" prefWidth="75.0" text="Remaining (₹)" />
-                                                        <TableColumn fx:id="colBudgetStatus" prefWidth="75.0" text="Status" />
-                                                    </columns>
-                                                    <columnResizePolicy>
-                                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                    </columnResizePolicy>
-                                                </TableView>
-                                                <HBox alignment="CENTER" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
-                                                    <children>
-                                                        <Button mnemonicParsing="false" onAction="#handleAddBudget" text="Set New Budget" />
-                                                        <Button mnemonicParsing="false" onAction="#handleEditBudget" text="Edit Selected" />
-                                                        <Button mnemonicParsing="false" onAction="#handleDeleteBudget" text="Delete Selected" />
-                                                    </children>
-                                                </HBox>
-                                            </children>
-                                            <padding>
-                                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                            </padding>
-                                        </VBox>
-                                    </children>
-                                </AnchorPane>
-                            </content>
-                        </Tab>
-                        <Tab text="Accounts">
-                            <content>
-                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                    <children>
-                                        <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                            <children>
-                                                <Label styleClass="label-title" text="Your Accounts" />
-                                                <TableView fx:id="accountTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                                                    <columns>
-                                                        <TableColumn fx:id="colAccountId" prefWidth="75.0" text="ID" />
-                                                        <TableColumn fx:id="colAccountName" prefWidth="150.0" text="Name" />
-                                                        <TableColumn fx:id="colAccountType" prefWidth="100.0" text="Type" />
-                                                        <TableColumn fx:id="colAccountInitialBalance" prefWidth="100.0" text="Initial Bal. (₹)" />
-                                                        <TableColumn fx:id="colAccountCurrentBalance" prefWidth="100.0" text="Current Bal. (₹)" />
-                                                        <TableColumn fx:id="colAccountCreatedAt" prefWidth="150.0" text="Created At" />
-                                                    </columns>
-                                                    <columnResizePolicy>
-                                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                    </columnResizePolicy>
-                                                </TableView>
-                                                <HBox alignment="CENTER" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
-                                                    <children>
-                                                        <Button mnemonicParsing="false" onAction="#handleAddAccount" text="Add New Account" />
-                                                        <Button mnemonicParsing="false" onAction="#handleEditAccount" text="Edit Selected Account" />
-                                                        <Button mnemonicParsing="false" onAction="#handleDeleteAccount" text="Delete Selected Account" />
-                                                    </children>
-                                                </HBox>
-                                            </children>
-                                            <padding>
-                                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                            </padding>
-                                        </VBox>
-                                    </children>
-                                </AnchorPane>
-                            </content>
-                        </Tab>
-                        <Tab text="Categories">
-                            <content>
-                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
-                                    <children>
-                                        <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0" spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                                            <children>
-                                                <Label styleClass="label-title" text="Your Categories" />
-                                                <TableView fx:id="categoryTable" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                                                    <columns>
-                                                        <TableColumn fx:id="colCategoryId" prefWidth="75.0" text="ID" />
-                                                        <TableColumn fx:id="colCategoryName" prefWidth="150.0" text="Name" />
-                                                        <TableColumn fx:id="colCategoryType" prefWidth="100.0" text="Type" />
-                                                        <TableColumn fx:id="colCategoryIsDefault" prefWidth="100.0" text="Default" />
-                                                        <TableColumn fx:id="colCategoryCreatedAt" prefWidth="150.0" text="Created At" />
-                                                    </columns>
-                                                    <columnResizePolicy>
-                                                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
-                                                    </columnResizePolicy>
-                                                </TableView>
-                                                <HBox alignment="CENTER" prefHeight="50.0" prefWidth="200.0" spacing="10.0">
-                                                    <children>
-                                                        <Button mnemonicParsing="false" onAction="#handleAddCategory" text="Add New Category" />
-                                                        <Button mnemonicParsing="false" onAction="#handleEditCategory" text="Edit Selected Category" />
-                                                        <Button mnemonicParsing="false" onAction="#handleDeleteCategory" text="Delete Selected Category" />
-                                                    </children>
-                                                </HBox>
-                                            </children>
-                                            <padding>
-                                                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                            </padding>
-                                        </VBox>
-                                    </children>
-                                </AnchorPane>
-                            </content>
-                        </Tab>
-                    </tabs>
-                </TabPane>
-            </children>
-        </VBox>
-    </children>
-</AnchorPane>
+                            </GridPane>
+
+                            <Label styleClass="section-title" text="Financial Charts" />
+                            <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                                <!-- Pie Chart -->
+                                <VBox alignment="CENTER" HBox.hgrow="ALWAYS" minHeight="300.0" prefHeight="400.0" prefWidth="300.0" styleClass="chart-container">
+                                    <PieChart fx:id="expensePieChart" prefHeight="350.0" prefWidth="300.0" title="Expense Categories Breakdown (Current Month)" titleSide="TOP">
+                                        <!-- Removed inner padding as VBox padding is sufficient -->
+                                    </PieChart>
+                                </VBox>
+                                <!-- Bar Chart -->
+                                <VBox alignment="CENTER" HBox.hgrow="ALWAYS" minHeight="300.0" prefHeight="400.0" prefWidth="400.0" styleClass="chart-container">
+                                    <BarChart fx:id="monthlyExpensesBarChart" prefHeight="350.0" prefWidth="400.0" title="Monthly Expenses Comparison">
+                                        <xAxis>
+                                            <CategoryAxis fx:id="monthlyExpensesXAxis" label="Month" side="BOTTOM">
+                                                <tickLabelFont>
+                                                    <Font size="10.0" />
+                                                </tickLabelFont>
+                                            </CategoryAxis>
+                                        </xAxis>
+                                        <yAxis>
+                                            <NumberAxis fx:id="monthlyExpensesYAxis" label="Amount (₹)" side="LEFT" />
+                                        </yAxis>
+                                        <padding>
+                                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                        </padding>
+                                    </BarChart>
+                                </VBox>
+                                <!-- Line Chart -->
+                                <VBox alignment="CENTER" HBox.hgrow="ALWAYS" minHeight="300.0" prefHeight="400.0" prefWidth="400.0" styleClass="chart-container">
+                                    <LineChart fx:id="expenseTrendsLineChart" prefHeight="350.0" prefWidth="400.0" title="Expense Trends Over Time">
+                                        <xAxis>
+                                            <CategoryAxis fx:id="expenseTrendsXAxis" label="Date" side="BOTTOM">
+                                                <tickLabelFont>
+                                                    <Font size="10.0" />
+                                                </tickLabelFont>
+                                            </CategoryAxis>
+                                        </xAxis>
+                                        <yAxis>
+                                            <NumberAxis fx:id="expenseTrendsYAxis" label="Amount (₹)" side="LEFT" />
+                                        </yAxis>
+                                        <padding>
+                                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                        </padding>
+                                    </LineChart>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+                    </ScrollPane>
+                </content>
+            </Tab>
+            <Tab text="Transactions List">
+                <content>
+                    <VBox spacing="10.0" styleClass="tab-content-pane">
+                        <padding>
+                            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                        </padding>
+                        <HBox spacing="10.0" styleClass="button-bar">
+                            <Button onAction="#handleAddTransaction" styleClass="action-button" text="Add New" />
+                            <Button onAction="#handleEditTransaction" styleClass="action-button" text="Edit Selected" />
+                            <Button onAction="#handleDeleteTransaction" styleClass="action-button" text="Delete Selected" />
+                        </HBox>
+                        <TableView fx:id="transactionTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colTransDate" prefWidth="100.0" text="Date" />
+                                <TableColumn fx:id="colTransAmount" prefWidth="100.0" text="Amount (₹)" />
+                                <TableColumn fx:id="colTransType" prefWidth="80.0" text="Type" />
+                                <TableColumn fx:id="colTransCategory" prefWidth="150.0" text="Category" />
+                                <TableColumn fx:id="colTransDescription" prefWidth="300.0" text="Description" />
+                                <TableColumn fx:id="colTransAccount" prefWidth="150.0" text="Account" />
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                            </columnResizePolicy>
+                        </TableView>
+                    </VBox>
+                </content>
+            </Tab>
+            <Tab text="Budgeting">
+                <content>
+                    <VBox spacing="10.0" styleClass="tab-content-pane">
+                        <padding>
+                            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                        </padding>
+                        <HBox spacing="10.0" styleClass="button-bar">
+                            <Button onAction="#handleAddBudget" styleClass="action-button" text="Set New Budget" />
+                            <Button onAction="#handleEditBudget" styleClass="action-button" text="Edit Selected" />
+                            <Button onAction="#handleDeleteBudget" styleClass="action-button" text="Delete Selected" />
+                        </HBox>
+                        <TableView fx:id="budgetTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colBudgetCategory" prefWidth="150.0" text="Category" />
+                                <TableColumn fx:id="colBudgetLimit" prefWidth="100.0" text="Budget Limit (₹)" />
+                                <TableColumn fx:id="colBudgetMonth" prefWidth="80.0" text="Month" />
+                                <TableColumn fx:id="colBudgetYear" prefWidth="80.0" text="Year" />
+                                <TableColumn fx:id="colBudgetSpent" prefWidth="100.0" text="Amount Spent (₹)" />
+                                <TableColumn fx:id="colBudgetRemaining" prefWidth="120.0" text="Amount Remaining (₹)" />
+                                <TableColumn fx:id="colBudgetStatus" prefWidth="100.0" text="Status" />
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                            </columnResizePolicy>
+                        </TableView>
+                    </VBox>
+                </content>
+            </Tab>
+            <Tab text="Accounts">
+                <content>
+                    <VBox spacing="10.0" styleClass="tab-content-pane">
+                        <padding>
+                            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                        </padding>
+                        <HBox spacing="10.0" styleClass="button-bar">
+                            <Button onAction="#handleAddAccount" styleClass="action-button" text="Add New" />
+                            <Button onAction="#handleEditAccount" styleClass="action-button" text="Edit Selected" />
+                            <Button onAction="#handleDeleteAccount" styleClass="action-button" text="Delete Selected" />
+                        </HBox>
+                        <TableView fx:id="accountTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colAccountId" prefWidth="75.0" text="ID" />
+                                <TableColumn fx:id="colAccountName" prefWidth="150.0" text="Account Name" />
+                                <TableColumn fx:id="colAccountType" prefWidth="120.0" text="Type" />
+                                <TableColumn fx:id="colAccountInitialBalance" prefWidth="150.0" text="Initial Balance (₹)" />
+                                <TableColumn fx:id="colAccountCurrentBalance" prefWidth="150.0" text="Current Balance (₹)" />
+                                <TableColumn fx:id="colAccountCreatedAt" prefWidth="150.0" text="Created At" />
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                            </columnResizePolicy>
+                        </TableView>
+                    </VBox>
+                </content>
+            </Tab>
+            <Tab text="Categories">
+                <content>
+                    <VBox spacing="10.0" styleClass="tab-content-pane">
+                        <padding>
+                            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                        </padding>
+                        <HBox spacing="10.0" styleClass="button-bar">
+                            <Button onAction="#handleAddCategory" styleClass="action-button" text="Add New" />
+                            <Button onAction="#handleEditCategory" styleClass="action-button" text="Edit Selected" />
+                            <Button onAction="#handleDeleteCategory" styleClass="action-button" text="Delete Selected" />
+                        </HBox>
+                        <TableView fx:id="categoryTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colCategoryId" prefWidth="75.0" text="ID" />
+                                <TableColumn fx:id="colCategoryName" prefWidth="150.0" text="Category Name" />
+                                <TableColumn fx:id="colCategoryType" prefWidth="120.0" text="Type" />
+                                <TableColumn fx:id="colCategoryIsDefault" prefWidth="100.0" text="Default" />
+                                <TableColumn fx:id="colCategoryCreatedAt" prefWidth="150.0" text="Created At" />
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                            </columnResizePolicy>
+                        </TableView>
+                    </VBox>
+                </content>
+            </Tab>
+        </tabs>
+    </TabPane>
+</VBox>

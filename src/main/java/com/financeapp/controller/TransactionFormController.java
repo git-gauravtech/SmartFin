@@ -9,15 +9,16 @@ import com.financeapp.model.Category;
 import com.financeapp.model.Transaction;
 import com.financeapp.model.User;
 import com.financeapp.utils.AlertUtil;
-import com.financeapp.utils.WekaPredictor;
-import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -25,70 +26,58 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Controller for the Transaction Form (Add/Edit Transaction).
- * Handles input validation, AI categorization, and saving/updating transactions.
+ * Controller for the TransactionForm.fxml, used for adding and editing transactions.
  */
 public class TransactionFormController {
 
     private static final Logger LOGGER = Logger.getLogger(TransactionFormController.class.getName());
 
-    @FXML private Label formTitle;
-    @FXML private TextField amountField;
     @FXML private DatePicker datePicker;
-    @FXML private RadioButton incomeRadio;
-    @FXML private RadioButton expenseRadio;
-    @FXML private ToggleGroup transactionTypeGroup;
+    @FXML private TextField amountField;
+    @FXML private ComboBox<String> typeComboBox;
+    @FXML private ComboBox<String> categoryComboBox;
+    @FXML private ComboBox<String> accountComboBox;
     @FXML private TextArea descriptionArea;
-    @FXML private ComboBox<Category> categoryComboBox; // Changed to Category object
-    @FXML private ComboBox<Account> accountComboBox;   // New ComboBox for Account
+    @FXML private Button saveButton;
 
-    private DashboardController dashboardController; // Reference to the main dashboard controller
+    private DashboardController dashboardController;
     private User currentUser;
-    private Transaction transactionToEdit; // Holds the transaction if in edit mode
+    private Transaction transactionToEdit; // Will be null for new transaction, set for editing
 
     private final TransactionDAO transactionDAO = new TransactionDAO();
-    private final CategoryDAO categoryDAO = new CategoryDAO(); // New DAO for categories
-    private final AccountDAO accountDAO = new AccountDAO();   // New DAO for accounts
+    private final AccountDAO accountDAO = new AccountDAO();
+    private final CategoryDAO categoryDAO = new CategoryDAO();
+
+    // Store original values for updating transaction to revert old balance changes
+    private double originalAmount;
+    private int originalAccountId;
+    private String originalType;
 
 
     /**
-     * Initializes the controller. Sets up listeners for description changes for AI categorization.
+     * Initializes the controller. Sets up combo boxes and their listeners.
      */
     @FXML
     public void initialize() {
-        // Set initial state for radios
-        expenseRadio.setSelected(true); // Default to expense
+        typeComboBox.getItems().addAll("Income", "Expense");
 
-        // Add listener to transaction type radio buttons
-        transactionTypeGroup.selectedToggleProperty().addListener((observable, oldToggle, newToggle) -> {
-            if (newToggle != null) {
-                // When type changes, re-populate categories based on type
-                populateCategoryComboBox(((RadioButton) newToggle).getText());
+        // Listener to dynamically update category combo box based on selected type
+        typeComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && currentUser != null) {
+                populateCategoryComboBox(newVal);
             }
         });
 
-        // Listener for description changes to trigger AI categorization
-        descriptionArea.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && !newValue.trim().isEmpty()) {
-                String predictedCategoryName = WekaPredictor.predictCategory(newValue.trim());
-                // Try to find the Category object by name from the current list
-                categoryComboBox.getItems().stream()
-                        .filter(c -> c.getCategoryName().equalsIgnoreCase(predictedCategoryName))
-                        .findFirst()
-                        .ifPresentOrElse(
-                                categoryComboBox.getSelectionModel()::select,
-                                () -> categoryComboBox.getSelectionModel().select(
-                                        categoryComboBox.getItems().stream()
-                                                .filter(c -> c.getCategoryName().equalsIgnoreCase("Miscellaneous") && c.getCategoryType().equals("Expense"))
-                                                .findFirst().orElse(null)
-                                ) // Fallback to "Miscellaneous" expense category
-                        );
+        // Add input validation for amount field
+        amountField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue.matches("\\d*(\\.\\d{0,2})?")) {
+                amountField.setText(oldValue);
             }
         });
     }
 
     /**
-     * Sets the reference to the main DashboardController.
+     * Sets the reference to the main dashboard controller to allow refreshing the table.
      * @param dashboardController The DashboardController instance.
      */
     public void setDashboardController(DashboardController dashboardController) {
@@ -96,144 +85,118 @@ public class TransactionFormController {
     }
 
     /**
-     * Sets the current logged-in user for the form and populates dynamic data.
-     * @param currentUser The current User object.
+     * Sets the current logged-in user and populates initial data.
+     * @param currentUser The User object of the current user.
      */
     public void setCurrentUser(User currentUser) {
         this.currentUser = currentUser;
-        populateCategoryComboBox(expenseRadio.isSelected() ? "Expense" : "Income"); // Initial population based on default selected type
         populateAccountComboBox();
+        // Populate category combo box with default "Expense" type initially
+        populateCategoryComboBox("Expense");
     }
 
     /**
-     * Populates the category ComboBox based on the selected transaction type.
-     * @param type "Income" or "Expense".
-     */
-    private void populateCategoryComboBox(String type) {
-        if (currentUser != null) {
-            List<Category> categories = categoryDAO.getCategoriesByUserIdAndType(currentUser.getUserId(), type);
-            // Sort categories by name for better UX
-            categories.sort(Comparator.comparing(Category::getCategoryName));
-            categoryComboBox.setItems(FXCollections.observableArrayList(categories));
-            if (!categories.isEmpty()) {
-                categoryComboBox.getSelectionModel().selectFirst();
-            } else {
-                categoryComboBox.getSelectionModel().clearSelection();
-                AlertUtil.showWarning("No Categories", "No Categories Available",
-                        "Please add " + type.toLowerCase() + " categories in the Categories tab before adding this transaction type.");
-            }
-        }
-    }
-
-    /**
-     * Populates the account ComboBox with the current user's accounts.
-     */
-    private void populateAccountComboBox() {
-        if (currentUser != null) {
-            List<Account> accounts = accountDAO.getAccountsByUserId(currentUser.getUserId());
-            accountComboBox.setItems(FXCollections.observableArrayList(accounts));
-            if (!accounts.isEmpty()) {
-                accountComboBox.getSelectionModel().selectFirst();
-            } else {
-                accountComboBox.getSelectionModel().clearSelection();
-                AlertUtil.showWarning("No Accounts", "No Accounts Available", "Please add accounts in the Accounts tab before adding transactions.");
-            }
-        }
-    }
-
-
-    /**
-     * Sets the transaction to be edited. If null, the form is in add mode.
-     * @param transaction The Transaction object to edit.
+     * Sets the transaction to be edited. If null, indicates a new transaction is being added.
+     * Pre-fills the form fields if a transaction is provided.
+     * @param transaction The Transaction object to edit, or null for a new transaction.
      */
     public void setTransaction(Transaction transaction) {
         this.transactionToEdit = transaction;
         if (transactionToEdit != null) {
-            formTitle.setText("Edit Transaction");
-            amountField.setText(String.format("₹%.2f", transactionToEdit.getAmount()));
             datePicker.setValue(transactionToEdit.getTransactionDate());
-
-            if ("Income".equals(transactionToEdit.getType())) {
-                incomeRadio.setSelected(true);
-                populateCategoryComboBox("Income");
-            } else {
-                expenseRadio.setSelected(true);
-                populateCategoryComboBox("Expense");
-            }
+            amountField.setText(String.format("%.2f", transactionToEdit.getAmount()));
+            typeComboBox.setValue(transactionToEdit.getType());
+            // Populate category combo box based on the transaction's type before setting value
+            populateCategoryComboBox(transactionToEdit.getType());
+            categoryComboBox.setValue(transactionToEdit.getCategoryName());
+            accountComboBox.setValue(transactionToEdit.getAccountName());
             descriptionArea.setText(transactionToEdit.getDescription());
 
-            // Select category
-            Category currentCategory = categoryDAO.getCategoryById(transactionToEdit.getCategoryId());
-            if (currentCategory != null) {
-                categoryComboBox.getSelectionModel().select(currentCategory);
-            }
-
-            // Select account
-            Account currentAccount = accountDAO.getAccountById(transactionToEdit.getAccountId());
-            if (currentAccount != null) {
-                accountComboBox.getSelectionModel().select(currentAccount);
-            }
-
+            // Store original values for update operation
+            originalAmount = transactionToEdit.getAmount();
+            originalAccountId = transactionToEdit.getAccountId();
+            originalType = transactionToEdit.getType();
         } else {
-            formTitle.setText("Add New Transaction");
-            datePicker.setValue(LocalDate.now()); // Default to today's date for new transactions
+            // For new transactions, set default date to today
+            datePicker.setValue(LocalDate.now());
         }
     }
 
     /**
-     * Handles the save button action. Validates input and saves/updates the transaction.
+     * Populates the account combo box with the current user's accounts.
+     */
+    private void populateAccountComboBox() {
+        if (currentUser == null) return;
+        List<Account> accounts = accountDAO.getAccountsByUserId(currentUser.getUserId());
+        accountComboBox.getItems().setAll(accounts.stream()
+                .map(Account::getAccountName)
+                .collect(Collectors.toList()));
+        if (!accounts.isEmpty() && transactionToEdit == null) {
+            accountComboBox.getSelectionModel().selectFirst(); // Select first account for new transactions
+        }
+    }
+
+    /**
+     * Populates the category combo box based on the selected transaction type (Income/Expense).
+     * @param type The type of category to load ("Income" or "Expense").
+     */
+    private void populateCategoryComboBox(String type) {
+        if (currentUser == null || type == null) return;
+        List<Category> categories = categoryDAO.getCategoriesByUserIdAndType(currentUser.getUserId(), type);
+        categoryComboBox.getItems().setAll(categories.stream()
+                .map(Category::getCategoryName)
+                .collect(Collectors.toList()));
+        if (!categories.isEmpty() && categoryComboBox.getValue() == null && transactionToEdit == null) {
+            // Select first for new transactions if no category is pre-selected
+            categoryComboBox.getSelectionModel().selectFirst();
+        }
+    }
+
+    /**
+     * Handles the save button action. Adds a new transaction or updates an existing one.
+     * @param event The ActionEvent that triggered this method.
      */
     @FXML
-    private void handleSave() {
-        if (currentUser == null) {
-            AlertUtil.showError("Save Failed", "No User", "Current user session not found. Please log in again.");
+    private void handleSaveTransaction(ActionEvent event) {
+        LocalDate transactionDate = datePicker.getValue();
+        String amountText = amountField.getText().trim();
+        String type = typeComboBox.getValue();
+        String categoryName = categoryComboBox.getValue();
+        String accountName = accountComboBox.getValue();
+        String description = descriptionArea.getText().trim();
+
+        if (transactionDate == null || amountText.isEmpty() || type == null || categoryName == null || accountName == null) {
+            AlertUtil.showWarning("Input Error", "Missing Fields", "Please fill in all required fields (Date, Amount, Type, Category, Account).");
             return;
         }
 
-        // Input Validation
         double amount;
         try {
-            amount = Double.parseDouble(amountField.getText().replace("₹", "")); // Remove rupee symbol for parsing
+            amount = Double.parseDouble(amountText);
             if (amount <= 0) {
-                AlertUtil.showWarning("Invalid Input", "Invalid Amount", "Amount must be a positive number.");
+                AlertUtil.showWarning("Input Error", "Invalid Amount", "Amount must be a positive number.");
                 return;
             }
         } catch (NumberFormatException e) {
-            AlertUtil.showWarning("Invalid Input", "Invalid Amount", "Please enter a valid numerical amount (e.g., ₹100.50).");
+            AlertUtil.showWarning("Input Error", "Invalid Amount Format", "Please enter a valid numeric amount (e.g., 123.45).");
             return;
         }
 
-        LocalDate date = datePicker.getValue();
-        if (date == null) {
-            AlertUtil.showWarning("Invalid Input", "Invalid Date", "Please select a transaction date.");
-            return;
-        }
+        // Get actual Category and Account objects to retrieve their IDs
+        Category selectedCategory = categoryDAO.getCategoriesByUserIdAndType(currentUser.getUserId(), type).stream()
+                .filter(c -> c.getCategoryName().equals(categoryName))
+                .findFirst().orElse(null);
 
-        String type = ((RadioButton) transactionTypeGroup.getSelectedToggle()).getText();
-        String description = descriptionArea.getText().trim();
+        Account selectedAccount = accountDAO.getAccountsByUserId(currentUser.getUserId()).stream()
+                .filter(a -> a.getAccountName().equals(accountName))
+                .findFirst().orElse(null);
 
-        Category selectedCategory = categoryComboBox.getSelectionModel().getSelectedItem();
         if (selectedCategory == null) {
-            AlertUtil.showWarning("Invalid Input", "Missing Category", "Please select a category.");
+            AlertUtil.showError("Data Error", "Category Not Found", "Selected category could not be found. Please refresh and try again.");
             return;
         }
-
-        Account selectedAccount = accountComboBox.getSelectionModel().getSelectedItem();
         if (selectedAccount == null) {
-            AlertUtil.showWarning("Invalid Input", "Missing Account", "Please select an account.");
-            return;
-        }
-
-        if (description.isEmpty()) {
-            AlertUtil.showWarning("Invalid Input", "Missing Description", "Please enter a description for the transaction.");
-            return;
-        }
-
-        // Ensure the selected category type matches the transaction type
-        if (!selectedCategory.getCategoryType().equalsIgnoreCase(type)) {
-            AlertUtil.showWarning("Category Type Mismatch", "Invalid Category Selection",
-                    "The selected category '" + selectedCategory.getCategoryName() + "' is an " +
-                            selectedCategory.getCategoryType() + " category. Please select a " + type + " category.");
+            AlertUtil.showError("Data Error", "Account Not Found", "Selected account could not be found. Please refresh and try again.");
             return;
         }
 
@@ -243,32 +206,40 @@ public class TransactionFormController {
             // Add new transaction
             Transaction newTransaction = new Transaction(
                     currentUser.getUserId(),
-                    selectedAccount.getAccountId(), // Use selected Account ID
+                    selectedAccount.getAccountId(),
+                    selectedCategory.getCategoryId(),
                     amount,
                     type,
-                    selectedCategory.getCategoryId(), // Use selected Category ID
                     description,
-                    date
+                    transactionDate
             );
             success = transactionDAO.addTransaction(newTransaction);
             if (success) {
-                AlertUtil.showInfo("Success", "Transaction Added", "New transaction has been added.");
+                AlertUtil.showInfo("Success", "Transaction Added", "New transaction added successfully.");
             } else {
-                AlertUtil.showError("Error", "Save Failed", "Failed to add new transaction. Please try again.");
+                AlertUtil.showError("Error", "Addition Failed", "Could not add transaction. Please try again.");
             }
         } else {
             // Update existing transaction
-            transactionToEdit.setAmount(amount);
-            transactionToEdit.setTransactionDate(date);
-            transactionToEdit.setType(type);
-            transactionToEdit.setDescription(description);
-            transactionToEdit.setCategoryId(selectedCategory.getCategoryId()); // Update Category ID
-            transactionToEdit.setAccountId(selectedAccount.getAccountId());   // Update Account ID
-            success = transactionDAO.updateTransaction(transactionToEdit);
+            Transaction updatedTransaction = new Transaction(
+                    transactionToEdit.getTransactionId(),
+                    currentUser.getUserId(),
+                    selectedAccount.getAccountId(),
+                    selectedCategory.getCategoryId(),
+                    amount,
+                    type,
+                    description,
+                    transactionDate,
+                    transactionToEdit.getCreatedAt() // Preserve original creation timestamp
+            );
+
+            // Pass original values for correct balance adjustment
+            success = transactionDAO.updateTransaction(updatedTransaction, originalAmount, originalAccountId, originalType);
+
             if (success) {
-                AlertUtil.showInfo("Success", "Transaction Updated", "Transaction has been updated.");
+                AlertUtil.showInfo("Success", "Transaction Updated", "Transaction updated successfully.");
             } else {
-                AlertUtil.showError("Error", "Update Failed", "Failed to update transaction. Please try again.");
+                AlertUtil.showError("Error", "Update Failed", "Could not update transaction. Please try again.");
             }
         }
 
@@ -279,17 +250,21 @@ public class TransactionFormController {
 
     /**
      * Handles the cancel button action, closing the form without saving.
+     * @param event The ActionEvent that triggered this method.
      */
     @FXML
-    private void handleCancel() {
+    private void handleCancel(ActionEvent event) {
         closeForm();
     }
 
     /**
-     * Closes the current stage (form window).
+     * Closes the current form window.
      */
     private void closeForm() {
-        Stage stage = (Stage) amountField.getScene().getWindow();
+        Stage stage = (Stage) datePicker.getScene().getWindow();
         stage.close();
+        if (dashboardController != null) {
+            dashboardController.refreshDashboard(); // Refresh the main dashboard after close
+        }
     }
 }

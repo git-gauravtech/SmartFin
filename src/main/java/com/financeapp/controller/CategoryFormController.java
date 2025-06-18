@@ -5,48 +5,43 @@ import com.financeapp.dao.CategoryDAO;
 import com.financeapp.model.Category;
 import com.financeapp.model.User;
 import com.financeapp.utils.AlertUtil;
-import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Controller for the Category Form (Add/Edit Category).
- * Handles input validation and saving/updating categories.
+ * Controller for the CategoryForm.fxml, used for adding and editing categories.
  */
 public class CategoryFormController {
 
     private static final Logger LOGGER = Logger.getLogger(CategoryFormController.class.getName());
 
-    @FXML private Label formTitle;
     @FXML private TextField categoryNameField;
     @FXML private ComboBox<String> categoryTypeComboBox;
+    @FXML private Button saveButton;
 
-    private DashboardController dashboardController; // Reference to the main dashboard controller
+    private DashboardController dashboardController;
     private User currentUser;
-    private Category categoryToEdit; // Holds the category if in edit mode
+    private Category categoryToEdit; // Will be null for new category, set for editing
 
     private final CategoryDAO categoryDAO = new CategoryDAO();
 
-    private static final String[] CATEGORY_TYPES = {"Income", "Expense"};
-
     /**
-     * Initializes the controller. Populates the category type combo box.
+     * Initializes the controller. Sets up the category type combo box.
      */
     @FXML
     public void initialize() {
-        categoryTypeComboBox.setItems(FXCollections.observableArrayList(Arrays.asList(CATEGORY_TYPES)));
-        categoryTypeComboBox.getSelectionModel().selectFirst(); // Default to "Income" or first in list
+        categoryTypeComboBox.getItems().addAll("Income", "Expense");
     }
 
     /**
-     * Sets the reference to the main DashboardController.
+     * Sets the reference to the main dashboard controller to allow refreshing the table.
      * @param dashboardController The DashboardController instance.
      */
     public void setDashboardController(DashboardController dashboardController) {
@@ -54,87 +49,66 @@ public class CategoryFormController {
     }
 
     /**
-     * Sets the current logged-in user for the form.
-     * @param currentUser The current User object.
+     * Sets the current logged-in user.
+     * @param currentUser The User object of the current user.
      */
     public void setCurrentUser(User currentUser) {
         this.currentUser = currentUser;
     }
 
     /**
-     * Sets the category to be edited. If null, the form is in add mode.
-     * @param category The Category object to edit.
+     * Sets the category to be edited. If null, indicates a new category is being added.
+     * Pre-fills the form fields if a category is provided.
+     * @param category The Category object to edit, or null for a new category.
      */
     public void setCategory(Category category) {
         this.categoryToEdit = category;
         if (categoryToEdit != null) {
-            formTitle.setText("Edit Category");
             categoryNameField.setText(categoryToEdit.getCategoryName());
-            categoryTypeComboBox.getSelectionModel().select(categoryToEdit.getCategoryType());
-
-            // Disable name and type if it's a default category or if category name is being edited (unique constraint)
+            categoryTypeComboBox.setValue(categoryToEdit.getCategoryType());
+            // Disable editing for default categories
             if (categoryToEdit.isDefault()) {
-                categoryNameField.setDisable(true);
+                categoryNameField.setEditable(false);
                 categoryTypeComboBox.setDisable(true);
-                AlertUtil.showInfo("Default Category", "Cannot Edit Default Category", "System default categories cannot be edited, only viewed.");
-            } else {
-                // Allow name and type to be edited for custom categories
-                categoryNameField.setDisable(false);
-                categoryTypeComboBox.setDisable(false);
+                saveButton.setDisable(true);
+                AlertUtil.showInfo("Default Category", "Cannot Edit Default Category", "System default categories cannot be edited.");
             }
-        } else {
-            formTitle.setText("Add New Category");
         }
     }
 
     /**
-     * Handles the save button action. Validates input and saves/updates the category.
+     * Handles the save button action. Adds a new category or updates an existing one.
+     * @param event The ActionEvent that triggered this method.
      */
     @FXML
-    private void handleSave() {
-        if (currentUser == null) {
-            AlertUtil.showError("Save Failed", "No User", "Current user session not found. Please log in again.");
-            return;
-        }
-
-        // If editing a default category, just close (as per setCategory logic)
-        if (categoryToEdit != null && categoryToEdit.isDefault()) {
-            closeForm();
-            return;
-        }
-
-        // Input Validation
+    private void handleSaveCategory(ActionEvent event) {
         String categoryName = categoryNameField.getText().trim();
-        String categoryType = categoryTypeComboBox.getSelectionModel().getSelectedItem();
+        String categoryType = categoryTypeComboBox.getValue();
 
-        if (categoryName.isEmpty()) {
-            AlertUtil.showWarning("Invalid Input", "Missing Category Name", "Please enter a category name.");
-            return;
-        }
-        if (categoryType == null || categoryType.isEmpty()) {
-            AlertUtil.showWarning("Invalid Input", "Missing Category Type", "Please select a category type.");
+        if (categoryName.isEmpty() || categoryType == null) {
+            AlertUtil.showWarning("Input Error", "Missing Fields", "Please enter category name and select type.");
             return;
         }
 
         boolean success;
         if (categoryToEdit == null) {
             // Add new category
-            Category newCategory = new Category(currentUser.getUserId(), categoryName, categoryType, false); // New custom category is not default
+            Category newCategory = new Category(currentUser.getUserId(), categoryName, categoryType);
             success = categoryDAO.addCategory(newCategory);
             if (success) {
-                AlertUtil.showInfo("Success", "Category Added", "New category has been added.");
+                AlertUtil.showInfo("Success", "Category Added", "New category '" + categoryName + "' added successfully.");
             } else {
-                // Error message handled by DAO (duplicate category name)
+                AlertUtil.showError("Error", "Addition Failed", "Could not add category. It might already exist or a database error occurred.");
             }
         } else {
             // Update existing category
-            categoryToEdit.setCategoryName(categoryName);
-            categoryToEdit.setCategoryType(categoryType);
-            success = categoryDAO.updateCategory(categoryToEdit);
+            // Use the constructor that matches the fields you intend to update and have available
+            Category updatedCategory = new Category(categoryToEdit.getCategoryId(), currentUser.getUserId(), categoryName, categoryType, categoryToEdit.isDefault(), categoryToEdit.getCreatedAt());
+            success = categoryDAO.updateCategory(updatedCategory);
             if (success) {
-                AlertUtil.showInfo("Success", "Category Updated", "Category has been updated.");
+                AlertUtil.showInfo("Success", "Category Updated", "Category '" + categoryName + "' updated successfully.");
             } else {
-                // Error message handled by DAO (duplicate category name)
+                AlertUtil.showError("Error", "Update Failed", "Could not update category. It might already exist or a database error occurred.");
             }
         }
 
@@ -145,17 +119,21 @@ public class CategoryFormController {
 
     /**
      * Handles the cancel button action, closing the form without saving.
+     * @param event The ActionEvent that triggered this method.
      */
     @FXML
-    private void handleCancel() {
+    private void handleCancel(ActionEvent event) {
         closeForm();
     }
 
     /**
-     * Closes the current stage (form window).
+     * Closes the current form window.
      */
     private void closeForm() {
         Stage stage = (Stage) categoryNameField.getScene().getWindow();
         stage.close();
+        if (dashboardController != null) {
+            dashboardController.refreshDashboard(); // Refresh the main dashboard after close
+        }
     }
 }

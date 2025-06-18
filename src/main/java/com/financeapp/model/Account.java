@@ -2,10 +2,9 @@
 package com.financeapp.model;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 /**
- * Represents a user's financial account (e.g., Checking, Savings, Credit Card).
+ * Represents a financial account (e.g., Checking, Savings, Credit Card).
  */
 public class Account {
     private int accountId;
@@ -16,16 +15,9 @@ public class Account {
     private String accountType; // e.g., "Checking", "Savings", "Credit Card", "Cash"
     private LocalDateTime createdAt;
 
-    // Constructor for adding new accounts (without ID, createdAt, currentBalance)
-    public Account(int userId, String accountName, double initialBalance, String accountType) {
-        this.userId = userId;
-        this.accountName = accountName;
-        this.initialBalance = initialBalance;
-        this.currentBalance = initialBalance; // currentBalance starts as initialBalance
-        this.accountType = accountType;
-    }
-
-    // Full constructor for retrieving from database
+    /**
+     * Full constructor for retrieving accounts from the database.
+     */
     public Account(int accountId, int userId, String accountName, double initialBalance, double currentBalance, String accountType, LocalDateTime createdAt) {
         this.accountId = accountId;
         this.userId = userId;
@@ -36,79 +28,69 @@ public class Account {
         this.createdAt = createdAt;
     }
 
-    // Getters
+    /**
+     * Constructor for creating a new account (ID will be auto-generated).
+     * currentBalance is typically initialized with initialBalance.
+     */
+    public Account(int userId, String accountName, double initialBalance, String accountType) {
+        this(-1, userId, accountName, initialBalance, initialBalance, accountType, LocalDateTime.now());
+    }
+
+    // --- Getters and Setters ---
+
     public int getAccountId() {
         return accountId;
+    }
+
+    public void setAccountId(int accountId) {
+        this.accountId = accountId;
     }
 
     public int getUserId() {
         return userId;
     }
 
-    public String getAccountName() {
-        return accountName;
-    }
-
-    public double getInitialBalance() {
-        return initialBalance;
-    }
-
-    public double getCurrentBalance() {
-        return currentBalance;
-    }
-
-    public String getAccountType() {
-        return accountType;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    // Setters (for updating properties, especially currentBalance)
-    public void setAccountId(int accountId) {
-        this.accountId = accountId;
-    }
-
     public void setUserId(int userId) {
         this.userId = userId;
+    }
+
+    public String getAccountName() {
+        return accountName;
     }
 
     public void setAccountName(String accountName) {
         this.accountName = accountName;
     }
 
+    public double getInitialBalance() {
+        return initialBalance;
+    }
+
     public void setInitialBalance(double initialBalance) {
         this.initialBalance = initialBalance;
+    }
+
+    public double getCurrentBalance() {
+        return currentBalance;
     }
 
     public void setCurrentBalance(double currentBalance) {
         this.currentBalance = currentBalance;
     }
 
+    public String getAccountType() {
+        return accountType;
+    }
+
     public void setAccountType(String accountType) {
         this.accountType = accountType;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    @Override
-    public String toString() {
-        return accountName + " (" + accountType + ")"; // For display in ComboBoxes
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Account account = (Account) o;
-        return accountId == account.accountId; // Unique ID is sufficient for equality
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(accountId);
     }
 }

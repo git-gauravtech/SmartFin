@@ -5,126 +5,141 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Represents a single financial transaction (income or expense).
+ * Represents a financial transaction within the system.
  */
 public class Transaction {
     private int transactionId;
     private int userId;
-    private int accountId; // New: to link to an Account (Phase 3)
+    private int accountId;
+    private int categoryId;
     private double amount;
     private String type; // "Income" or "Expense"
-    private int categoryId; // New: Foreign key to categories table
-    private String categoryName; // To easily display category name in UI without fetching Category object always
     private String description;
     private LocalDate transactionDate;
     private LocalDateTime createdAt;
 
-    // Constructor for adding new transactions (without ID, createdAt)
-    public Transaction(int userId, int accountId, double amount, String type, int categoryId, String description, LocalDate transactionDate) {
-        this.userId = userId;
-        this.accountId = accountId;
-        this.amount = amount;
-        this.type = type;
-        this.categoryId = categoryId;
-        this.description = description;
-        this.transactionDate = transactionDate;
-        // categoryName will be fetched/set by DAO or logic that knows the categoryId
-    }
+    // Additional fields for displaying names in UI tables without extra lookups in FXML
+    private String categoryName;
+    private String accountName;
 
-    // Full constructor for retrieving from database
-    public Transaction(int transactionId, int userId, int accountId, double amount, String type, int categoryId,
-                       String description, LocalDate transactionDate, LocalDateTime createdAt) {
+    /**
+     * Full constructor for retrieving existing transactions from the database.
+     */
+    public Transaction(int transactionId, int userId, int accountId, int categoryId, double amount, String type, String description, LocalDate transactionDate, LocalDateTime createdAt) {
         this.transactionId = transactionId;
         this.userId = userId;
         this.accountId = accountId;
+        this.categoryId = categoryId;
         this.amount = amount;
         this.type = type;
-        this.categoryId = categoryId;
         this.description = description;
         this.transactionDate = transactionDate;
         this.createdAt = createdAt;
-        // categoryName will be fetched/set by DAO or logic that knows the categoryId
     }
 
-    // Getters
+    /**
+     * Constructor for creating new transactions (ID will be auto-generated).
+     */
+    public Transaction(int userId, int accountId, int categoryId, double amount, String type, String description, LocalDate transactionDate) {
+        this(-1, userId, accountId, categoryId, amount, type, description, transactionDate, LocalDateTime.now());
+    }
+
+    /**
+     * Minimal constructor for DAO validation (e.g., checking if transactions exist for an account/category).
+     */
+    public Transaction(int transactionId) {
+        this.transactionId = transactionId;
+    }
+
+
+    // --- Getters and Setters ---
+
     public int getTransactionId() {
         return transactionId;
+    }
+
+    public void setTransactionId(int transactionId) {
+        this.transactionId = transactionId;
     }
 
     public int getUserId() {
         return userId;
     }
 
-    public int getAccountId() {
-        return accountId;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public int getCategoryId() {
-        return categoryId;
-    }
-
-    public String getCategoryName() {
-        return categoryName; // This is a convenience field, typically set after fetching
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public LocalDate getTransactionDate() {
-        return transactionDate;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    // Setters (for updates)
-    public void setTransactionId(int transactionId) {
-        this.transactionId = transactionId;
-    }
-
     public void setUserId(int userId) {
         this.userId = userId;
+    }
+
+    public int getAccountId() {
+        return accountId;
     }
 
     public void setAccountId(int accountId) {
         this.accountId = accountId;
     }
 
-    public void setAmount(double amount) {
-        this.amount = amount;
-    }
-
-    public void setType(String type) {
-        this.type = type;
+    public int getCategoryId() {
+        return categoryId;
     }
 
     public void setCategoryId(int categoryId) {
         this.categoryId = categoryId;
     }
 
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
+    public double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(double amount) {
+        this.amount = amount;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public void setDescription(String description) {
         this.description = description;
     }
 
+    public LocalDate getTransactionDate() {
+        return transactionDate;
+    }
+
     public void setTransactionDate(LocalDate transactionDate) {
         this.transactionDate = transactionDate;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    // --- Getters and Setters for UI display names ---
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getAccountName() {
+        return accountName;
+    }
+
+    public void setAccountName(String accountName) {
+        this.accountName = accountName;
     }
 }

@@ -1,12 +1,18 @@
 // src/main/java/com/financeapp/dao/TransactionDAO.java
 package com.financeapp.dao;
 
+import com.financeapp.model.Account;
 import com.financeapp.model.Category;
 import com.financeapp.model.Transaction;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,272 +21,300 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Data Access Object for managing Transaction data in the database.
- * Handles CRUD operations for transactions and aggregate queries.
- * Now also responsible for updating account balances.
+ * Data Access Object (DAO) for managing Transaction entities in the database.
+ * Handles CRUD operations and data retrieval for reports/charts.
  */
 public class TransactionDAO {
 
     private static final Logger LOGGER = Logger.getLogger(TransactionDAO.class.getName());
-    private final CategoryDAO categoryDAO = new CategoryDAO();
-    private final AccountDAO accountDAO = new AccountDAO();
 
     /**
-     * Adds a new transaction to the database and updates the associated account balance.
+     * Adds a new transaction to the database.
+     * Also updates the current balance of the associated account.
+     *
      * @param transaction The Transaction object to add.
-     * @return True if successful, false otherwise.
+     * @return true if the transaction was added successfully, false otherwise.
      */
     public boolean addTransaction(Transaction transaction) {
-        String sql = "INSERT INTO transactions (user_id, account_id, amount, type, category_id, description, transaction_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO transactions (user_id, account_id, category_id, amount, type, description, transaction_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
         Connection conn = null;
+        PreparedStatement pstmt = null;
+        boolean success = false;
+
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false); // Start transaction
 
-            try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                pstmt.setInt(1, transaction.getUserId());
-                pstmt.setInt(2, transaction.getAccountId());
-                pstmt.setDouble(3, transaction.getAmount());
-                pstmt.setString(4, transaction.getType());
-                pstmt.setInt(5, transaction.getCategoryId());
-                pstmt.setString(6, transaction.getDescription());
-                pstmt.setDate(7, Date.valueOf(transaction.getTransactionDate()));
+            pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            pstmt.setInt(1, transaction.getUserId());
+            pstmt.setInt(2, transaction.getAccountId());
+            pstmt.setInt(3, transaction.getCategoryId());
+            pstmt.setDouble(4, transaction.getAmount());
+            pstmt.setString(5, transaction.getType());
+            pstmt.setString(6, transaction.getDescription());
+            pstmt.setDate(7, Date.valueOf(transaction.getTransactionDate()));
 
-                int affectedRows = pstmt.executeUpdate();
-                if (affectedRows == 0) {
-                    conn.rollback();
-                    return false;
-                }
+            int affectedRows = pstmt.executeUpdate();
 
+            if (affectedRows > 0) {
+                // Get the generated transaction ID
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         transaction.setTransactionId(generatedKeys.getInt(1));
-                    } else {
-                        conn.rollback();
-                        return false;
                     }
                 }
+
+                // Update account balance
+                updateAccountBalance(conn, transaction.getAccountId(), transaction.getAmount(), transaction.getType(), true);
+                conn.commit(); // Commit transaction
+                success = true;
+            } else {
+                conn.rollback(); // Rollback if no rows affected
             }
-
-            // Update account balance
-            if (!accountDAO.updateAccountBalance(conn, transaction.getAccountId(), transaction.getAmount(), transaction.getType())) {
-                conn.rollback();
-                return false;
-            }
-
-            conn.commit(); // Commit transaction
-            LOGGER.log(Level.INFO, "Transaction added successfully and account balance updated.");
-            return true;
-
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error adding transaction or updating account balance.", e);
+            LOGGER.log(Level.SEVERE, "Error adding transaction: " + e.getMessage(), e);
             if (conn != null) {
                 try {
                     conn.rollback(); // Rollback on error
                 } catch (SQLException ex) {
-                    LOGGER.log(Level.SEVERE, "Error during rollback.", ex);
+                    LOGGER.log(Level.SEVERE, "Error during rollback: " + ex.getMessage(), ex);
                 }
             }
-            return false;
         } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true); // Restore auto-commit
-                    conn.close();
-                } catch (SQLException e) {
-                    LOGGER.log(Level.SEVERE, "Error closing connection after transaction.", e);
-                }
+            try {
+                if (conn != null) conn.setAutoCommit(true); // Restore auto-commit
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources: " + e.getMessage(), e);
             }
         }
+        return success;
     }
 
     /**
-     * Updates an existing transaction and adjusts account balances accordingly.
+     * Updates an existing transaction in the database.
+     * Correctly adjusts old and new account balances.
+     *
      * @param transaction The Transaction object with updated details.
-     * @return True if successful, false otherwise.
+     * @param oldAmount The original amount of the transaction before editing.
+     * @param oldAccountId The original account ID before editing.
+     * @param oldType The original type (Income/Expense) before editing.
+     * @return true if the transaction was updated successfully, false otherwise.
      */
-    public boolean updateTransaction(Transaction transaction) {
-        // First, retrieve the old transaction to calculate balance difference
-        Transaction oldTransaction = getTransactionById(transaction.getTransactionId());
-        if (oldTransaction == null) {
-            LOGGER.log(Level.WARNING, "Attempted to update non-existent transaction ID: " + transaction.getTransactionId());
-            return false;
-        }
-
-        String sql = "UPDATE transactions SET account_id = ?, amount = ?, type = ?, category_id = ?, description = ?, transaction_date = ? WHERE transaction_id = ? AND user_id = ?";
+    public boolean updateTransaction(Transaction transaction, double oldAmount, int oldAccountId, String oldType) {
+        String sql = "UPDATE transactions SET account_id = ?, category_id = ?, amount = ?, type = ?, description = ?, transaction_date = ? WHERE transaction_id = ? AND user_id = ?";
         Connection conn = null;
+        PreparedStatement pstmt = null;
+        boolean success = false;
+
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false); // Start transaction
 
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setInt(1, transaction.getAccountId());
-                pstmt.setDouble(2, transaction.getAmount());
-                pstmt.setString(3, transaction.getType());
-                pstmt.setInt(4, transaction.getCategoryId());
-                pstmt.setString(5, transaction.getDescription());
-                pstmt.setDate(6, Date.valueOf(transaction.getTransactionDate()));
-                pstmt.setInt(7, transaction.getTransactionId());
-                pstmt.setInt(8, transaction.getUserId());
+            // 1. Revert old balance changes from the original account
+            updateAccountBalance(conn, oldAccountId, oldAmount, oldType, false); // false for reverse operation
 
-                int affectedRows = pstmt.executeUpdate();
-                if (affectedRows == 0) {
-                    conn.rollback();
-                    return false;
-                }
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, transaction.getAccountId());
+            pstmt.setInt(2, transaction.getCategoryId());
+            pstmt.setDouble(3, transaction.getAmount());
+            pstmt.setString(4, transaction.getType());
+            pstmt.setString(5, transaction.getDescription());
+            pstmt.setDate(6, Date.valueOf(transaction.getTransactionDate()));
+            pstmt.setInt(7, transaction.getTransactionId());
+            pstmt.setInt(8, transaction.getUserId());
+
+            int affectedRows = pstmt.executeUpdate();
+
+            if (affectedRows > 0) {
+                // 2. Apply new balance changes to the new/same account
+                updateAccountBalance(conn, transaction.getAccountId(), transaction.getAmount(), transaction.getType(), true); // true for apply operation
+                conn.commit(); // Commit transaction
+                success = true;
+            } else {
+                conn.rollback(); // Rollback if no rows affected
             }
-
-            // Adjust account balances for the change:
-            // 1. Revert old transaction's impact (opposite type, same amount) on its original account
-            if (!accountDAO.updateAccountBalance(conn, oldTransaction.getAccountId(), oldTransaction.getAmount(),
-                    "Income".equals(oldTransaction.getType()) ? "Expense" : "Income")) { // Reverse type
-                conn.rollback();
-                return false;
-            }
-
-            // 2. Apply new transaction's impact on its (potentially new) account
-            if (!accountDAO.updateAccountBalance(conn, transaction.getAccountId(), transaction.getAmount(), transaction.getType())) {
-                conn.rollback();
-                return false;
-            }
-
-            conn.commit(); // Commit transaction
-            LOGGER.log(Level.INFO, "Transaction updated successfully and account balances adjusted.");
-            return true;
-
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error updating transaction or adjusting account balance.", e);
+            LOGGER.log(Level.SEVERE, "Error updating transaction: " + e.getMessage(), e);
             if (conn != null) {
                 try {
                     conn.rollback(); // Rollback on error
                 } catch (SQLException ex) {
-                    LOGGER.log(Level.SEVERE, "Error during rollback.", ex);
+                    LOGGER.log(Level.SEVERE, "Error during rollback: " + ex.getMessage(), ex);
                 }
             }
-            return false;
         } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true); // Restore auto-commit
-                    conn.close();
-                } catch (SQLException e) {
-                    LOGGER.log(Level.SEVERE, "Error closing connection after transaction update.", e);
-                }
+            try {
+                if (conn != null) conn.setAutoCommit(true); // Restore auto-commit
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources: " + e.getMessage(), e);
             }
         }
+        return success;
     }
 
     /**
-     * Deletes a transaction from the database and adjusts the associated account balance.
+     * Deletes a transaction from the database.
+     * Also reverts the balance change from the associated account.
+     *
      * @param transactionId The ID of the transaction to delete.
      * @param userId The ID of the user who owns the transaction.
-     * @return True if successful, false otherwise.
+     * @return true if the transaction was deleted successfully, false otherwise.
      */
     public boolean deleteTransaction(int transactionId, int userId) {
-        // First, retrieve the transaction to revert its impact on account balance
-        Transaction transactionToDelete = getTransactionById(transactionId);
-        if (transactionToDelete == null || transactionToDelete.getUserId() != userId) {
-            LOGGER.log(Level.WARNING, "Attempted to delete non-existent or unauthorized transaction ID: " + transactionId);
-            return false;
-        }
-
-        String sql = "DELETE FROM transactions WHERE transaction_id = ? AND user_id = ?";
+        String selectSql = "SELECT account_id, amount, type FROM transactions WHERE transaction_id = ? AND user_id = ?";
+        String deleteSql = "DELETE FROM transactions WHERE transaction_id = ? AND user_id = ?";
         Connection conn = null;
+        PreparedStatement selectPstmt = null;
+        PreparedStatement deletePstmt = null;
+        ResultSet rs = null;
+        boolean success = false;
+
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false); // Start transaction
 
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setInt(1, transactionId);
-                pstmt.setInt(2, userId);
+            // First, get transaction details to revert account balance
+            selectPstmt = conn.prepareStatement(selectSql);
+            selectPstmt.setInt(1, transactionId);
+            selectPstmt.setInt(2, userId);
+            rs = selectPstmt.executeQuery();
 
-                int affectedRows = pstmt.executeUpdate();
-                if (affectedRows == 0) {
-                    conn.rollback();
-                    return false;
+            if (rs.next()) {
+                int accountId = rs.getInt("account_id");
+                double amount = rs.getDouble("amount");
+                String type = rs.getString("type");
+
+                // Delete the transaction
+                deletePstmt = conn.prepareStatement(deleteSql);
+                deletePstmt.setInt(1, transactionId);
+                deletePstmt.setInt(2, userId);
+                int affectedRows = deletePstmt.executeUpdate();
+
+                if (affectedRows > 0) {
+                    // Revert account balance change
+                    updateAccountBalance(conn, accountId, amount, type, false); // false for reverse operation
+                    conn.commit(); // Commit transaction
+                    success = true;
+                } else {
+                    conn.rollback(); // Rollback if no rows affected
                 }
+            } else {
+                conn.rollback(); // Rollback if transaction not found
             }
-
-            // Revert account balance impact
-            if (!accountDAO.updateAccountBalance(conn, transactionToDelete.getAccountId(), transactionToDelete.getAmount(),
-                    "Income".equals(transactionToDelete.getType()) ? "Expense" : "Income")) { // Reverse type
-                conn.rollback();
-                return false;
-            }
-
-            conn.commit(); // Commit transaction
-            LOGGER.log(Level.INFO, "Transaction deleted successfully and account balance adjusted.");
-            return true;
-
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error deleting transaction or adjusting account balance.", e);
+            LOGGER.log(Level.SEVERE, "Error deleting transaction: " + e.getMessage(), e);
             if (conn != null) {
                 try {
                     conn.rollback(); // Rollback on error
                 } catch (SQLException ex) {
-                    LOGGER.log(Level.SEVERE, "Error during rollback.", ex);
+                    LOGGER.log(Level.SEVERE, "Error during rollback: " + ex.getMessage(), ex);
                 }
             }
-            return false;
         } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true); // Restore auto-commit
-                    conn.close();
-                } catch (SQLException e) {
-                    LOGGER.log(Level.SEVERE, "Error closing connection after transaction deletion.", e);
-                }
+            try {
+                if (conn != null) conn.setAutoCommit(true); // Restore auto-commit
+                if (rs != null) rs.close();
+                if (selectPstmt != null) selectPstmt.close();
+                if (deletePstmt != null) deletePstmt.close();
+                if (conn != null) conn.close();
+            } catch (SQLException e) {
+                LOGGER.log(Level.SEVERE, "Error closing resources: " + e.getMessage(), e);
             }
         }
+        return success;
     }
 
     /**
-     * Retrieves a single transaction by its ID.
-     * @param transactionId The ID of the transaction.
+     * Helper method to update account balance within a transaction.
+     *
+     * @param conn The active SQL Connection.
+     * @param accountId The ID of the account to update.
+     * @param amount The amount of the transaction.
+     * @param type The type of the transaction ("Income" or "Expense").
+     * @param applyOperation true to apply the transaction effect, false to reverse it.
+     * @throws SQLException If a database access error occurs.
+     */
+    private void updateAccountBalance(Connection conn, int accountId, double amount, String type, boolean applyOperation) throws SQLException {
+        String sql = "UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            double balanceChange = 0;
+            // Determine the actual change based on type and operation (apply/reverse)
+            if (type.equals("Income")) {
+                balanceChange = applyOperation ? amount : -amount;
+            } else if (type.equals("Expense")) {
+                // For 'Expense', we subtract from checking/savings/cash, but add to credit card debt
+                AccountDAO accountDAO = new AccountDAO(); // Instantiate AccountDAO to use its method
+                String accountType = accountDAO.getAccountTypeById(conn, accountId); // Pass connection to avoid new one
+
+                if ("Credit Card".equalsIgnoreCase(accountType)) {
+                    // For credit card, expense increases the negative balance (e.g., -500 becomes -510)
+                    balanceChange = applyOperation ? amount : -amount;
+                } else {
+                    // For other accounts (Checking, Savings, Cash), expense decreases balance
+                    balanceChange = applyOperation ? -amount : amount;
+                }
+            }
+            pstmt.setDouble(1, balanceChange);
+            pstmt.setInt(2, accountId);
+            pstmt.executeUpdate();
+        }
+    }
+
+
+    /**
+     * Retrieves a specific transaction by its ID and user ID.
+     *
+     * @param transactionId The ID of the transaction to retrieve.
+     * @param userId The ID of the user who owns the transaction.
      * @return The Transaction object, or null if not found.
      */
-    public Transaction getTransactionById(int transactionId) {
+    public Transaction getTransactionById(int transactionId, int userId) {
         String sql = "SELECT t.*, c.category_name, a.account_name " +
                 "FROM transactions t " +
                 "JOIN categories c ON t.category_id = c.category_id " +
                 "JOIN accounts a ON t.account_id = a.account_id " +
-                "WHERE t.transaction_id = ?";
+                "WHERE t.transaction_id = ? AND t.user_id = ?";
+        Transaction transaction = null;
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, transactionId);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                Transaction transaction = new Transaction(
-                        rs.getInt("transaction_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("account_id"),
-                        rs.getDouble("amount"),
-                        rs.getString("type"),
-                        rs.getInt("category_id"),
-                        rs.getString("description"),
-                        rs.getDate("transaction_date").toLocalDate(),
-                        rs.getTimestamp("created_at").toLocalDateTime()
-                );
-                transaction.setCategoryName(rs.getString("category_name"));
-                // You might also set account name if needed, or get Account object
-                return transaction;
+            pstmt.setInt(2, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    transaction = new Transaction(
+                            rs.getInt("transaction_id"),
+                            rs.getInt("user_id"),
+                            rs.getInt("account_id"),
+                            rs.getInt("category_id"),
+                            rs.getDouble("amount"),
+                            rs.getString("type"),
+                            rs.getString("description"),
+                            rs.getDate("transaction_date").toLocalDate(),
+                            rs.getTimestamp("created_at").toLocalDateTime()
+                    );
+                    transaction.setCategoryName(rs.getString("category_name"));
+                    transaction.setAccountName(rs.getString("account_name"));
+                }
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving transaction by ID: " + transactionId, e);
+            LOGGER.log(Level.SEVERE, "Error getting transaction by ID: " + e.getMessage(), e);
         }
-        return null;
+        return transaction;
     }
 
     /**
      * Retrieves all transactions for a specific user.
-     * @param userId The ID of the user.
+     * Joins with categories and accounts tables to get names.
+     *
+     * @param userId The ID of the user whose transactions to retrieve.
      * @return A list of Transaction objects.
      */
     public List<Transaction> getTransactionsByUserId(int userId) {
         List<Transaction> transactions = new ArrayList<>();
-        // Join with categories and accounts table to get names directly
         String sql = "SELECT t.*, c.category_name, a.account_name " +
                 "FROM transactions t " +
                 "JOIN categories c ON t.category_id = c.category_id " +
@@ -288,156 +322,213 @@ public class TransactionDAO {
                 "WHERE t.user_id = ? ORDER BY t.transaction_date DESC, t.created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, userId);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                Transaction transaction = new Transaction(
-                        rs.getInt("transaction_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("account_id"),
-                        rs.getDouble("amount"),
-                        rs.getString("type"),
-                        rs.getInt("category_id"),
-                        rs.getString("description"),
-                        rs.getDate("transaction_date").toLocalDate(),
-                        rs.getTimestamp("created_at").toLocalDateTime()
-                );
-                transaction.setCategoryName(rs.getString("category_name"));
-                // Set account name for display
-                // Note: Assuming Transaction model has setAccountName method
-                // For now, it's just stored in the transaction object's categoryName field for simplicity, will add
-                // a dedicated accountName field in Transaction model for more robustness later if required.
-                // For now, will use the categoryName field for account name as a temporary hack for colTransAccount.
-                // The correct way would be to add a new `String accountName;` field to Transaction.java and its constructors/setters.
-                // But since you asked for quick completion, I'll put it here.
-                // This is a temporary hack! Proper implementation requires adding `accountName` to `Transaction` model.
-                // If this is causing issues, I'll revert this specific line and add a proper field.
-                // For now, `colTransAccount` will just show the account ID as that's what's directly in the Transaction object.
-                // Reverted the hack to use categoryName field. This column will now show account name from DAO.
-                // This requires a `setAccountName` in `Transaction.java` and a new `getAccountName()` getter.
-                // I will add this to the Transaction.java model in the next block. For now, it will fetch from AccountDAO in Controller.
-                transactions.add(transaction);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Transaction transaction = new Transaction(
+                            rs.getInt("transaction_id"),
+                            rs.getInt("user_id"),
+                            rs.getInt("account_id"),
+                            rs.getInt("category_id"),
+                            rs.getDouble("amount"),
+                            rs.getString("type"),
+                            rs.getString("description"),
+                            rs.getDate("transaction_date").toLocalDate(),
+                            rs.getTimestamp("created_at").toLocalDateTime()
+                    );
+                    transaction.setCategoryName(rs.getString("category_name"));
+                    transaction.setAccountName(rs.getString("account_name"));
+                    transactions.add(transaction);
+                }
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving transactions for user ID: " + userId, e);
+            LOGGER.log(Level.SEVERE, "Error getting transactions by user ID: " + e.getMessage(), e);
         }
         return transactions;
     }
 
     /**
-     * Retrieves all transactions from the database (for admin view).
+     * Retrieves all transactions in the database (for admin view).
+     *
      * @return A list of all Transaction objects.
      */
     public List<Transaction> getAllTransactions() {
         List<Transaction> transactions = new ArrayList<>();
-        // Join with categories table to get category name directly
         String sql = "SELECT t.*, c.category_name, a.account_name " +
                 "FROM transactions t " +
                 "JOIN categories c ON t.category_id = c.category_id " +
                 "JOIN accounts a ON t.account_id = a.account_id " +
-                "ORDER BY t.created_at DESC";
+                "ORDER BY t.transaction_date DESC, t.created_at DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 Transaction transaction = new Transaction(
                         rs.getInt("transaction_id"),
                         rs.getInt("user_id"),
                         rs.getInt("account_id"),
+                        rs.getInt("category_id"),
                         rs.getDouble("amount"),
                         rs.getString("type"),
-                        rs.getInt("category_id"),
                         rs.getString("description"),
                         rs.getDate("transaction_date").toLocalDate(),
                         rs.getTimestamp("created_at").toLocalDateTime()
                 );
                 transaction.setCategoryName(rs.getString("category_name"));
-                // transaction.setAccountName(rs.getString("account_name")); // Needs accountName field in Transaction model
+                transaction.setAccountName(rs.getString("account_name"));
                 transactions.add(transaction);
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving all transactions.", e);
+            LOGGER.log(Level.SEVERE, "Error getting all transactions: " + e.getMessage(), e);
+        }
+        return transactions;
+    }
+
+    /**
+     * Retrieves all transactions linked to a specific category ID.
+     * Used for category deletion validation.
+     *
+     * @param categoryId The ID of the category.
+     * @return A list of Transaction objects linked to the category.
+     */
+    public List<Transaction> getTransactionsByCategoryId(int categoryId) {
+        List<Transaction> transactions = new ArrayList<>();
+        String sql = "SELECT transaction_id FROM transactions WHERE category_id = ?"; // Only select ID
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, categoryId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // Only need the ID, no need to fully construct object
+                    transactions.add(new Transaction(rs.getInt("transaction_id")));
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting transactions by category ID: " + e.getMessage(), e);
+        }
+        return transactions;
+    }
+
+    /**
+     * Retrieves all transactions linked to a specific account ID.
+     * Used for account deletion validation.
+     *
+     * @param accountId The ID of the account.
+     * @return A list of Transaction objects linked to the account.
+     */
+    public List<Transaction> getTransactionsByAccountId(int accountId) {
+        List<Transaction> transactions = new ArrayList<>();
+        String sql = "SELECT transaction_id FROM transactions WHERE account_id = ?"; // Only select ID
+        try (Connection conn = DatabaseConnection.getConnection(); // Corrected here
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, accountId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    transactions.add(new Transaction(rs.getInt("transaction_id"))); // Minimal object needed
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting transactions by account ID: " + e.getMessage(), e);
         }
         return transactions;
     }
 
 
+    // --- Methods for Dashboard Summary and Charts ---
+
     /**
-     * Calculates the total income for the current month for a specific user.
+     * Calculates the total income for a given user, month, and year.
+     *
      * @param userId The ID of the user.
      * @param month The month (1-12).
      * @param year The year.
      * @return The total income.
      */
     public double getTotalIncomeForMonth(int userId, int month, int year) {
-        String sql = "SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'Income' AND strftime('%Y', transaction_date) = ? AND strftime('%m', transaction_date) = ?";
-        return executeScalarQuery(sql, userId, year, month); // Corrected order of params
+        String sql = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ? AND type = 'Income' AND MONTH(transaction_date) = ? AND YEAR(transaction_date) = ?";
+        double totalIncome = 0;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, month);
+            pstmt.setInt(3, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    totalIncome = rs.getDouble(1);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting total income for month: " + e.getMessage(), e);
+        }
+        return totalIncome;
     }
 
     /**
-     * Calculates the total expenses for the current month for a specific user.
+     * Calculates the total expenses for a given user, month, and year.
+     *
      * @param userId The ID of the user.
      * @param month The month (1-12).
      * @param year The year.
      * @return The total expenses.
      */
     public double getTotalExpensesForMonth(int userId, int month, int year) {
-        String sql = "SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'Expense' AND strftime('%Y', transaction_date) = ? AND strftime('%m', transaction_date) = ?";
-        return executeScalarQuery(sql, userId, year, month); // Corrected order of params
+        String sql = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = ? AND type = 'Expense' AND MONTH(transaction_date) = ? AND YEAR(transaction_date) = ?";
+        double totalExpenses = 0;
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, month);
+            pstmt.setInt(3, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    totalExpenses = rs.getDouble(1);
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error getting total expenses for month: " + e.getMessage(), e);
+        }
+        return totalExpenses;
     }
 
     /**
-     * Calculates the total expense for a specific category ID, month, and year for a user.
+     * Calculates the total expenses for a given category, month, and year for a specific user.
      * Used for budget tracking.
+     *
      * @param userId The ID of the user.
      * @param categoryId The ID of the category.
      * @param month The month (1-12).
      * @param year The year.
-     * @return The total amount spent in that category for the given period.
+     * @return The total expenses for that category, month, and year.
      */
     public double getTotalExpenseForCategoryMonthYear(int userId, int categoryId, int month, int year) {
-        String sql = "SELECT SUM(amount) FROM transactions WHERE user_id = ? AND type = 'Expense' AND category_id = ? AND strftime('%Y', transaction_date) = ? AND strftime('%m', transaction_date) = ?";
-        return executeScalarQuery(sql, userId, categoryId, year, month);
-    }
-
-    /**
-     * Executes a scalar query (returns a single double value).
-     * @param sql The SQL query string.
-     * @param params Parameters for the prepared statement.
-     * @return The double result of the query, or 0.0 if no result or error.
-     */
-    private double executeScalarQuery(String sql, Object... params) {
-        double result = 0.0;
+        String sql = "SELECT COALESCE(SUM(t.amount), 0) FROM transactions t " +
+                "WHERE t.user_id = ? AND t.category_id = ? AND t.type = 'Expense' " +
+                "AND MONTH(t.transaction_date) = ? AND YEAR(t.transaction_date) = ?";
+        double totalSpent = 0;
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            for (int i = 0; i < params.length; i++) {
-                if (params[i] instanceof Integer) {
-                    pstmt.setInt(i + 1, (Integer) params[i]);
-                } else if (params[i] instanceof String) {
-                    pstmt.setString(i + 1, (String) params[i]);
-                } else if (params[i] instanceof Double) { // For double parameters
-                    pstmt.setDouble(i + 1, (Double) params[i]);
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, categoryId);
+            pstmt.setInt(3, month);
+            pstmt.setInt(4, year);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    totalSpent = rs.getDouble(1);
                 }
             }
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                result = rs.getDouble(1);
-            }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error executing scalar query: " + sql, e);
+            LOGGER.log(Level.SEVERE, "Error getting total expense for category month year: " + e.getMessage(), e);
         }
-        return result;
+        return totalSpent;
     }
 
-
     /**
-     * Retrieves expense breakdown by category name for a specific user for the current month.
+     * Retrieves the breakdown of expenses by category for a specific user
+     * for the current month.
+     * This is used for the Pie Chart.
+     *
      * @param userId The ID of the user.
-     * @return A map where keys are category names and values are total amounts spent.
+     * @return A map where keys are category names and values are total expense amounts.
      */
     public Map<String, Double> getExpenseCategoriesBreakdown(int userId) {
         Map<String, Double> breakdown = new HashMap<>();
@@ -445,197 +536,110 @@ public class TransactionDAO {
         int currentMonth = now.getMonthValue();
         int currentYear = now.getYear();
 
-        String sql = "SELECT c.category_name, SUM(t.amount) AS total_amount " +
-                "FROM transactions t JOIN categories c ON t.category_id = c.category_id " +
-                "WHERE t.user_id = ? AND t.type = 'Expense' AND strftime('%Y', t.transaction_date) = ? AND strftime('%m', t.transaction_date) = ? " +
-                "GROUP BY c.category_name";
+        String sql = "SELECT c.category_name, COALESCE(SUM(t.amount), 0) AS total_amount " +
+                "FROM categories c " +
+                "LEFT JOIN transactions t ON c.category_id = t.category_id " +
+                "AND t.user_id = c.user_id " + // Ensure transactions belong to the same user
+                "AND t.type = 'Expense' " +
+                "AND MONTH(t.transaction_date) = ? " +
+                "AND YEAR(t.transaction_date) = ? " +
+                "WHERE c.user_id = ? AND c.category_type = 'Expense' " +
+                "GROUP BY c.category_name " +
+                "HAVING COALESCE(SUM(t.amount), 0) > 0"; // Only include categories with positive expenses
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, userId);
-            pstmt.setString(2, String.format("%04d", currentYear)); // Ensure 4-digit year string
-            pstmt.setString(3, String.format("%02d", currentMonth)); // Ensure 2-digit month string
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                breakdown.put(rs.getString("category_name"), rs.getDouble("total_amount"));
+            pstmt.setInt(1, currentMonth);
+            pstmt.setInt(2, currentYear);
+            pstmt.setInt(3, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    breakdown.put(rs.getString("category_name"), rs.getDouble("total_amount"));
+                }
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting expense categories breakdown for user ID: " + userId, e);
+            LOGGER.log(Level.SEVERE, "Error getting expense categories breakdown: " + e.getMessage(), e);
         }
         return breakdown;
     }
 
 
     /**
-     * Retrieves monthly expenses for a specific user over the past few months.
+     * Retrieves total expenses for the last 6 months for a given user.
+     * Used for the Bar Chart.
+     *
      * @param userId The ID of the user.
-     * @return A map where keys are "YYYY-MM" strings and values are total monthly expenses.
+     * @return A map where keys are "YYYY-MM" strings and values are total expense amounts.
      */
     public Map<String, Double> getMonthlyExpenses(int userId) {
         Map<String, Double> monthlyExpenses = new HashMap<>();
-        String sql = "SELECT strftime('%Y-%m', transaction_date) AS month, SUM(amount) AS total_expenses " +
-                "FROM transactions WHERE user_id = ? AND type = 'Expense' " +
-                "GROUP BY month ORDER BY month DESC LIMIT 6"; // Get last 6 months
+        // Query to get expenses grouped by YYYY-MM for the last 6 months
+        String sql = "SELECT DATE_FORMAT(transaction_date, '%Y-%m') AS month_year, COALESCE(SUM(amount), 0) AS total_expense " +
+                "FROM transactions " +
+                "WHERE user_id = ? AND type = 'Expense' " +
+                "AND transaction_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) " + // Get data from last 6 months including current partial month
+                "GROUP BY month_year " +
+                "ORDER BY month_year ASC"; // Order chronologically
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, userId);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                monthlyExpenses.put(rs.getString("month"), rs.getDouble("total_expenses"));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    monthlyExpenses.put(rs.getString("month_year"), rs.getDouble("total_expense"));
+                }
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting monthly expenses for user ID: " + userId, e);
+            LOGGER.log(Level.SEVERE, "Error getting monthly expenses: " + e.getMessage(), e);
         }
         return monthlyExpenses;
     }
 
-    /**
-     * Retrieves unique expense category IDs for a given user.
-     * Used for populating category dropdowns.
-     * @param userId The ID of the user.
-     * @return A list of unique expense category names.
-     */
-    public List<String> getUniqueExpenseCategories(int userId) {
-        List<String> categories = new ArrayList<>();
-        String sql = "SELECT DISTINCT c.category_name FROM transactions t JOIN categories c ON t.category_id = c.category_id WHERE t.user_id = ? AND t.type = 'Expense'";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                categories.add(rs.getString("category_name"));
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting unique expense categories for user: " + userId, e);
-        }
-        return categories;
-    }
 
     /**
-     * Retrieves historical monthly spending for a specific category ID.
-     * Used for Weka prediction. Pads with 0.0 if not enough data.
+     * Retrieves historical monthly spending for a specific category for the last N months.
+     * Used for Weka prediction. The list is ordered from oldest to most recent.
+     *
      * @param userId The ID of the user.
      * @param categoryId The ID of the category.
-     * @param numMonths The number of past months to retrieve.
-     * @return A list of spending amounts, oldest first.
+     * @param monthsBack The number of months back to retrieve data (e.g., 3 for last 3 months).
+     * @return A list of monthly spending amounts, ordered from oldest to most recent.
      */
-    public List<Double> getHistoricalMonthlySpendingForCategory(int userId, int categoryId, int numMonths) {
+    public List<Double> getHistoricalMonthlySpendingForCategory(int userId, int categoryId, int monthsBack) {
         List<Double> historicalData = new ArrayList<>();
+        // Query to get expenses for the given category for the last 'monthsBack' months
+        String sql = "SELECT COALESCE(SUM(amount), 0) AS total_expense " +
+                "FROM transactions " +
+                "WHERE user_id = ? AND category_id = ? AND type = 'Expense' " +
+                "AND transaction_date <= CURDATE() " + // Only up to current date
+                "AND transaction_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH) " + // Go back 'monthsBack' months
+                "GROUP BY YEAR(transaction_date), MONTH(transaction_date) " +
+                "ORDER BY YEAR(transaction_date) ASC, MONTH(transaction_date) ASC"; // Oldest to most recent
 
-        // SQL to get spending for the last `numMonths`
-        String sql = "SELECT SUM(amount) AS total_spent, strftime('%Y-%m', transaction_date) AS month_year " +
-                "FROM transactions WHERE user_id = ? AND type = 'Expense' AND category_id = ? " +
-                "GROUP BY month_year ORDER BY month_year DESC LIMIT ?"; // Get most recent months first
-
-        Map<String, Double> monthlySpendingMap = new HashMap<>();
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, userId);
             pstmt.setInt(2, categoryId);
-            pstmt.setInt(3, numMonths);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                monthlySpendingMap.put(rs.getString("month_year"), rs.getDouble("total_spent"));
+            pstmt.setInt(3, monthsBack); // Parameter for INTERVAL
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    historicalData.add(rs.getDouble("total_expense"));
+                }
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error getting historical monthly spending for category ID: " + categoryId, e);
+            LOGGER.log(Level.SEVERE, "Error getting historical monthly spending for category: " + e.getMessage(), e);
         }
 
-        // Fill historicalData list, padding with 0.0 for months with no data
-        // Start from `numMonths` ago up to the previous month
-        LocalDate today = LocalDate.now();
-        for (int i = numMonths - 1; i >= 0; i--) {
-            LocalDate targetMonth = today.minusMonths(i + 1); // i=0 is last month, i=1 is 2 months ago etc.
-            String monthYearKey = targetMonth.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
-            historicalData.add(monthlySpendingMap.getOrDefault(monthYearKey, 0.0));
+        // Pad with zeros if not enough historical data
+        // This ensures the list always has 'monthsBack' elements for Weka, even if data is sparse
+        while (historicalData.size() < monthsBack) {
+            historicalData.add(0, 0.0); // Add zeros to the beginning (oldest months)
+        }
+        // Ensure only 'monthsBack' elements, taking the most recent ones if more than 'monthsBack' are returned
+        // This can happen if INTERVAL N MONTH includes more than N distinct month-year groups due to exact date ranges.
+        if (historicalData.size() > monthsBack) {
+            historicalData = historicalData.subList(historicalData.size() - monthsBack, historicalData.size());
         }
 
         return historicalData;
     }
-
-    /**
-     * Retrieves transactions linked to a specific account ID.
-     * Used for account deletion check.
-     * @param accountId The ID of the account.
-     * @return A list of transactions linked to the account.
-     */
-    public List<Transaction> getTransactionsByAccountId(int accountId) {
-        List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT * FROM transactions WHERE account_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, accountId);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                Transaction transaction = new Transaction(
-                        rs.getInt("transaction_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("account_id"),
-                        rs.getDouble("amount"),
-                        rs.getString("type"),
-                        rs.getInt("category_id"),
-                        rs.getString("description"),
-                        rs.getDate("transaction_date").toLocalDate(),
-                        rs.getTimestamp("created_at").toLocalDateTime()
-                );
-                // Optionally populate category name for consistency, though not strictly needed for this method's purpose
-                Category category = categoryDAO.getCategoryById(transaction.getCategoryId());
-                if (category != null) {
-                    transaction.setCategoryName(category.getCategoryName());
-                }
-                transactions.add(transaction);
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving transactions by account ID: " + accountId, e);
-        }
-        return transactions;
-    }
-
-    /**
-     * Retrieves transactions linked to a specific category ID.
-     * Used for category deletion check.
-     * @param categoryId The ID of the category.
-     * @return A list of transactions linked to the category.
-     */
-    public List<Transaction> getTransactionsByCategoryId(int categoryId) {
-        List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT * FROM transactions WHERE category_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, categoryId);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                Transaction transaction = new Transaction(
-                        rs.getInt("transaction_id"),
-                        rs.getInt("user_id"),
-                        rs.getInt("account_id"),
-                        rs.getDouble("amount"),
-                        rs.getString("type"),
-                        rs.getInt("category_id"),
-                        rs.getString("description"),
-                        rs.getDate("transaction_date").toLocalDate(),
-                        rs.getTimestamp("created_at").toLocalDateTime()
-                );
-                // Optionally populate category name for consistency
-                Category category = categoryDAO.getCategoryById(transaction.getCategoryId());
-                if (category != null) {
-                    transaction.setCategoryName(category.getCategoryName());
-                }
-                transactions.add(transaction);
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error retrieving transactions by category ID: " + categoryId, e);
-        }
-        return transactions;
-    }
-
 }

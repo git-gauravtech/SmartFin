@@ -34,13 +34,9 @@ import javafx.stage.StageStyle;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -193,7 +189,7 @@ public class DashboardController {
     /**
      * Refreshes all data displayed on the dashboard, including tables, summaries, and charts.
      */
-    private void refreshDashboard() {
+    public void refreshDashboard() { // Changed from private to public
         if (currentUser == null) return;
 
         Tab selectedTab = dashboardTabPane.getSelectionModel().getSelectedItem();
@@ -439,7 +435,8 @@ public class DashboardController {
         public int getMonth() { return budget.getMonth(); }
         public int getYear() { return budget.getYear(); }
         public String getMonthString() {
-            return LocalDate.of(getYear(), getMonth(), 1).format(DateTimeFormatter.ofPattern("MMM"));
+            // Use YearMonth to handle cases like January for previous year correctly
+            return YearMonth.of(getYear(), getMonth()).format(DateTimeFormatter.ofPattern("MMM"));
         }
         public Budget getBudget() { return budget; }
 
@@ -486,11 +483,11 @@ public class DashboardController {
         expenseTrendsLineChart.getData().clear();
 
 
-        // 1. Pie Chart: Expense Categories Breakdown
+        // 1. Pie Chart: Expense Categories Breakdown for Current Month
         Map<String, Double> categoryBreakdown = transactionDAO.getExpenseCategoriesBreakdown(currentUser.getUserId());
         ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
         if (categoryBreakdown.isEmpty() || categoryBreakdown.values().stream().allMatch(v -> v == 0.0)) {
-            pieChartData.add(new PieChart.Data("No Expenses", 1.0)); // Show empty slice if no data or all zero
+            pieChartData.add(new PieChart.Data("No Expenses This Month", 1.0)); // Show empty slice if no data or all zero
         } else {
             for (Map.Entry<String, Double> entry : categoryBreakdown.entrySet()) {
                 if (entry.getValue() > 0) { // Only add categories with actual positive expenses
@@ -498,56 +495,62 @@ public class DashboardController {
                 }
             }
             if (pieChartData.isEmpty()) { // If all values were 0 after filtering, show "No Expenses"
-                pieChartData.add(new PieChart.Data("No Expenses", 1.0));
+                pieChartData.add(new PieChart.Data("No Expenses This Month", 1.0));
             }
         }
         expensePieChart.setData(pieChartData);
-        expensePieChart.setTitle("Expense Categories Breakdown");
+        expensePieChart.setTitle("Expense Categories Breakdown (Current Month)");
 
-        // 2. Bar Chart: Monthly Expenses Comparison
-        Map<String, Double> monthlyExpenses = transactionDAO.getMonthlyExpenses(currentUser.getUserId());
+        // 2. Bar Chart: Monthly Expenses Comparison (Last 6 Months)
+        Map<String, Double> monthlyExpensesRaw = transactionDAO.getMonthlyExpenses(currentUser.getUserId());
+        // Use TreeMap to ensure natural sorting (YYYY-MM) for months on the chart
+        Map<String, Double> monthlyExpenses = new TreeMap<>(monthlyExpensesRaw);
+
         XYChart.Series<String, Number> monthlySeries = new XYChart.Series<>();
         monthlySeries.setName("Monthly Expenses");
 
-        // Get current month and go back up to 5 months to ensure we have 6 months range for the chart
+        // Dynamically get the last 6 months in "YYYY-MM" format, including current month
         LocalDate today = LocalDate.now();
-        List<String> monthsToDisplay = new java.util.ArrayList<>();
-        for (int i = 5; i >= 0; i--) { // Last 6 months including current
-            monthsToDisplay.add(today.minusMonths(i).format(DateTimeFormatter.ofPattern("yyyy-MM")));
+        List<String> lastSixMonthsLabels = new ArrayList<>();
+        for (int i = 5; i >= 0; i--) { // Iterate from 5 months ago up to current month
+            lastSixMonthsLabels.add(today.minusMonths(i).format(DateTimeFormatter.ofPattern("yyyy-MM")));
         }
 
-        for (String monthYear : monthsToDisplay) {
-            double expense = monthlyExpenses.getOrDefault(monthYear, 0.0);
-            monthlySeries.getData().add(new XYChart.Data<>(monthYear, expense));
+        for (String monthYearLabel : lastSixMonthsLabels) {
+            // Ensure all 6 months are present, even if no data, to show "0"
+            double expense = monthlyExpenses.getOrDefault(monthYearLabel, 0.0);
+            monthlySeries.getData().add(new XYChart.Data<>(monthYearLabel, expense));
         }
         monthlyExpensesBarChart.getData().add(monthlySeries);
         monthlyExpensesBarChart.setTitle("Monthly Expenses Comparison");
 
 
-        // 3. Line Chart: Expense Trends Over Time
+        // 3. Line Chart: Expense Trends Over Time (All Expenses)
         List<Transaction> allExpenses = transactionDAO.getTransactionsByUserId(currentUser.getUserId()).stream()
                 .filter(t -> t.getType().equals("Expense"))
                 .sorted(Comparator.comparing(Transaction::getTransactionDate)) // Sort by date for trend
                 .collect(Collectors.toList());
 
         // Group by date and sum expenses for that date
+        // Use TreeMap to ensure dates are sorted for the chart
         Map<LocalDate, Double> dailyExpenses = allExpenses.stream()
                 .collect(Collectors.groupingBy(Transaction::getTransactionDate,
+                        TreeMap::new, // Ensures sorted keys
                         Collectors.summingDouble(Transaction::getAmount)));
 
         XYChart.Series<String, Number> trendSeries = new XYChart.Series<>();
         trendSeries.setName("Daily Expense Trend");
 
-        // Sort dates to ensure chronological order
-        List<LocalDate> sortedDates = dailyExpenses.keySet().stream()
-                .sorted()
-                .collect(Collectors.toList());
-
         // Use a shorter date format for the X-axis to prevent overlapping
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd"); // Shorter format
 
-        for (LocalDate date : sortedDates) {
-            trendSeries.getData().add(new XYChart.Data<>(date.format(dateFormatter), dailyExpenses.get(date)));
+        if (dailyExpenses.isEmpty()) {
+            // Handle case where there are no expenses at all
+            trendSeries.getData().add(new XYChart.Data<>("No Data", 0)); // Add a placeholder point
+        } else {
+            for (Map.Entry<LocalDate, Double> entry : dailyExpenses.entrySet()) {
+                trendSeries.getData().add(new XYChart.Data<>(entry.getKey().format(dateFormatter), entry.getValue()));
+            }
         }
         expenseTrendsLineChart.getData().add(trendSeries);
         expenseTrendsLineChart.setTitle("Expense Trends Over Time");
@@ -572,19 +575,16 @@ public class DashboardController {
 
         predictedExpensesVBox.getChildren().add(new Label("By Category:"));
         for (Category category : expenseCategories) {
-            // Retrieve last 3 months of spending for this category (using category ID now)
-            // The historical data will be in chronological order (oldest first)
+            // Retrieve last 3 months of spending for this category.
+            // The list is ordered oldest to most recent by getHistoricalMonthlySpendingForCategory.
             List<Double> historicalData = transactionDAO.getHistoricalMonthlySpendingForCategory(currentUser.getUserId(), category.getCategoryId(), 3);
 
-            // Weka expects values for previous months as m1, m2, m3 (most recent first in terms of the prediction function's arguments)
-            // historicalData[0] -> 3 months ago, historicalData[1] -> 2 months ago, historicalData[2] -> 1 month ago
-            double m3 = historicalData.size() >= 1 ? historicalData.get(0) : 0.0; // 3 months ago (or 0 if not enough data)
-            double m2 = historicalData.size() >= 2 ? historicalData.get(1) : 0.0; // 2 months ago (or 0 if not enough data)
-            double m1 = historicalData.size() >= 3 ? historicalData.get(2) : 0.0; // 1 month ago (most recent, or 0)
+            // Ensure we have at least 3 data points, padding with 0.0 if not enough history
+            double m3 = historicalData.size() >= 1 ? historicalData.get(0) : 0.0; // Oldest of the 3
+            double m2 = historicalData.size() >= 2 ? historicalData.get(1) : 0.0; // Middle
+            double m1 = historicalData.size() >= 3 ? historicalData.get(2) : 0.0; // Most recent
 
-
-            // Predict using Weka
-            // WekaPredictor.predictNextMonthExpense takes (categoryName, m1, m2, m3) where m1 is most recent, m3 is oldest
+            // Predict using Weka. WekaPredictor.predictNextMonthExpense takes (categoryName, m1, m2, m3) where m1 is most recent.
             double predictedAmount = WekaPredictor.predictNextMonthExpense(category.getCategoryName(), m1, m2, m3);
 
             predictedAmount = Math.max(0, predictedAmount); // Ensure prediction is not negative
@@ -615,6 +615,10 @@ public class DashboardController {
      */
     @FXML
     private void handleAddAccount(ActionEvent event) {
+        if (accountDAO.getAccountsByUserId(currentUser.getUserId()).isEmpty()) {
+            AlertUtil.showWarning("No Accounts", "Cannot Add Transaction", "Please add at least one account before adding transactions.");
+            return;
+        }
         openAccountForm(null);
     }
 
