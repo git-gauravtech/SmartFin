@@ -1,0 +1,75 @@
+@relation TransactionCategories
+
+@attribute description string
+@attribute category {Food,Transport,Utilities,Rent,Salary,Shopping,Entertainment,Healthcare,Education,OtherIncome,OtherExpense}
+
+@data
+'Dominos Pizza',Food
+'Bus ticket to city',Transport
+'Electricity bill',Utilities
+'Monthly apartment rent',Rent
+'Salary deposit',Salary
+'Amazon purchase',Shopping
+'Movie tickets',Entertainment
+'Pharmacy purchase',Healthcare
+'Online course fee',Education
+'Freelance project payment',OtherIncome
+'Repair tools',OtherExpense
+'Starbucks coffee',Food
+'Subway fare',Transport
+'Water bill',Utilities
+'House rent',Rent
+'Consulting fee',OtherIncome
+'Grocery store',Food
+'Gas station fill up',Transport
+'Internet bill',Utilities
+'Weekend trip',Entertainment
+'Books from bookstore',Education
+'Doctor visit',Healthcare
+'Gym membership',Healthcare
+'Dividend income',OtherIncome
+'Gift expense',OtherExpense
+'Uber ride',Transport
+'Netflix subscription',Entertainment
+'Online course',Education
+'Dinner at restaurant',Food
+'Bus pass',Transport
+'Electricity company bill',Utilities
+'House rent payment',Rent
+'Paycheck',Salary
+'New clothes',Shopping
+'Concert tickets',Entertainment
+'Hospital bill',Healthcare
+'University tuition',Education
+'Side hustle income',OtherIncome
+'Miscellaneous expense',OtherExpense
+'McDonalds burger',Food
+'Train fare',Transport
+'Mobile recharge',Utilities
+'Apartment lease rent',Rent
+'Year-end bonus',Salary
+'Flipkart order',Shopping
+'Theater show',Entertainment
+'Medical insurance',Healthcare
+'Udemy subscription',Education
+'Website freelancing payment',OtherIncome
+'Repairman charges',OtherExpense
+'Pizza Hut delivery',Food
+'Taxi to airport',Transport
+'Gas bill',Utilities
+'Quarterly rent',Rent
+'Cashback reward',OtherIncome
+'Shopping mall purchase',Shopping
+'YouTube premium',Entertainment
+'Blood test fee',Healthcare
+'School fees',Education
+'One-time gift',OtherExpense
+'iPhone purchase',Shopping
+'Surgery charges',Healthcare
+'MacBook order',Shopping
+'Heart surgery payment',Healthcare
+'Coursera certification',Education
+'DSA Bootcamp',Education
+'Scholarship grant',OtherIncome
+'Painting class',Education
+'New year gift purchase',OtherExpense

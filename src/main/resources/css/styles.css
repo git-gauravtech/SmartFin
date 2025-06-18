@@ -1,0 +1,270 @@
+/* src/main/resources/css/styles.css */
+
+/* General Styles */
+.root {
+    -fx-font-family: "Arial", sans-serif;
+    -fx-background-color: #f0f2f5; /* Light gray background */
+}
+
+/* Common Button Styles */
+.button {
+    -fx-background-color: #4CAF50; /* Green */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 10px 20px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0, 0, 2); /* Subtle shadow */
+}
+
+.button:hover {
+    -fx-background-color: #45a049; /* Darker green on hover */
+}
+
+.button:pressed {
+    -fx-background-color: #3e8e41; /* Even darker on press */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 3, 0, 0, 1);
+}
+
+/* Specific Button Colors */
+#loginButton {
+    -fx-background-color: #007bff; /* Blue */
+}
+#loginButton:hover {
+    -fx-background-color: #0056b3;
+}
+
+#signupButton {
+    -fx-background-color: #6c757d; /* Gray */
+}
+#signupButton:hover {
+    -fx-background-color: #5a6268;
+}
+
+/* Text Fields and Password Fields */
+.text-field, .password-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ccc;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px 10px;
+    -fx-font-size: 14px;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #007bff; /* Highlight on focus */
+    -fx-background-color: #e9f5ff;
+}
+
+/* Labels */
+.label {
+    -fx-font-size: 14px;
+    -fx-text-fill: #333;
+}
+
+/* Main Title Label */
+.label-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #004085; /* Dark blue */
+}
+
+/* VBox and HBox general spacing/padding */
+.vbox, .hbox {
+    -fx-spacing: 10px;
+    -fx-padding: 15px;
+}
+
+/* AnchorPane for centering */
+.anchor-pane {
+    -fx-background-color: #f0f2f5;
+}
+
+/* TableView styles */
+.table-view {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 13px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #007bff; /* Blue header */
+    -fx-background-radius: 5px 5px 0 0;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.table-view .table-cell {
+    -fx-padding: 8px 10px;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #f7f7f7; /* Light alternating rows */
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #e0f2f7; /* Highlight row on hover */
+}
+
+/* Combo Box */
+.combo-box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ccc;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-font-size: 14px;
+}
+
+.combo-box .list-cell {
+    -fx-padding: 8px 10px;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected,
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
+}
+
+/* Date Picker */
+.date-picker {
+    -fx-font-size: 14px;
+}
+
+.date-picker .arrow-button {
+    -fx-background-color: #007bff;
+    -fx-background-radius: 5px;
+}
+
+.date-picker .arrow-button:hover {
+    -fx-background-color: #0056b3;
+}
+
+.date-picker .arrow-button .arrow {
+    -fx-background-color: white;
+}
+
+/* TabPane and Tabs */
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #e9e9e9;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #f0f0f0;
+    -fx-background-insets: 0.0;
+    -fx-background-radius: 5 5 0 0;
+    -fx-padding: 8 15 8 15;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1px;
+    -fx-border-bottom-width: 0px; /* Hide bottom border on selected tab */
+}
+
+.tab-pane .tab:hover {
+    -fx-background-color: #e0e0e0;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-text-fill: #333;
+    -fx-font-weight: bold;
+}
+
+.tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #007bff;
+}
+
+.tab-pane .tab-content-area {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1px;
+    -fx-border-radius: 0 0 5px 5px;
+}
+
+/* Chart Styles (basic) */
+.chart-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.axis-label {
+    -fx-font-size: 12px;
+}
+
+/* ScrollPane */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical .track,
+.scroll-pane .scroll-bar:horizontal .track {
+    -fx-background-color: #e0e0e0;
+    -fx-background-radius: 2em;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb,
+.scroll-pane .scroll-bar:horizontal .thumb {
+    -fx-background-color: #a0a0a0;
+    -fx-background-radius: 2em;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb:hover,
+.scroll-pane .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: #707070;
+}
+
+/* Admin Dashboard Specifics */
+#adminPanel {
+    -fx-background-color: #ffffff;
+    -fx-padding: 20px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 5);
+}
+
+#adminStatsGrid .label {
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+    -fx-text-fill: #2c3e50;
+}
+
+#adminStatsGrid .value-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3498db;
+}
+
+/* For labels showing current budget/spending status */
+.budget-status-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.budget-status-label.green {
+    -fx-text-fill: #28a745; /* Green for under budget */
+}
+
+.budget-status-label.orange {
+    -fx-text-fill: #ffc107; /* Orange for nearing limit */
+}
+
+.budget-status-label.red {
+    -fx-text-fill: #dc3545; /* Red for over budget */
+}
+

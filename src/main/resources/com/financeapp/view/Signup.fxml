@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" prefHeight="450.0" prefWidth="400.0" spacing="20.0" stylesheets="/css/styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.financeapp.controller.SignupController">
+    <children>
+        <Label styleClass="label-title" text="Create New Account">
+            <font>
+                <Font name="System Bold" size="24.0" />
+            </font>
+        </Label>
+        <VBox prefHeight="200.0" prefWidth="100.0" spacing="10.0">
+            <children>
+                <TextField fx:id="usernameField" promptText="Username" />
+                <HBox alignment="CENTER_LEFT" spacing="5.0">
+                    <children>
+                        <PasswordField fx:id="passwordField" HBox.hgrow="ALWAYS" promptText="Password" />
+                        <TextField fx:id="passwordVisibleField" managed="false" visible="false" HBox.hgrow="ALWAYS" promptText="Password" />
+                        <Button fx:id="togglePasswordVisibilityButton" mnemonicParsing="false" onAction="#togglePasswordVisibility" styleClass="icon-button" text="Show" />
+                    </children>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="5.0">
+                    <children>
+                        <PasswordField fx:id="confirmPasswordField" HBox.hgrow="ALWAYS" promptText="Confirm Password" />
+                        <TextField fx:id="confirmPasswordVisibleField" managed="false" visible="false" HBox.hgrow="ALWAYS" promptText="Confirm" />
+                        <Button fx:id="toggleConfirmPasswordVisibilityButton" mnemonicParsing="false" onAction="#toggleConfirmPasswordVisibility" styleClass="icon-button" text="Show" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+        <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0" spacing="10.0">
+            <children>
+                <Button mnemonicParsing="false" onAction="#handleSignup" prefWidth="150.0" text="Sign Up" />
+                <HBox alignment="CENTER" spacing="5.0">
+                    <children>
+                        <Label text="Already have an account?" />
+                        <Button mnemonicParsing="false" onAction="#handleLogin" styleClass="link-button" text="Login Here" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </children>
+    <padding>
+        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+    </padding>
+</VBox>
