@@ -12,7 +12,7 @@ import com.financeapp.model.Transaction;
 import com.financeapp.model.User;
 import com.financeapp.utils.AlertUtil;
 import com.financeapp.utils.SessionManager;
-import com.financeapp.utils.WekaPredictor;
+import com.financeapp.utils.WekaPredictor; // Import your WekaPredictor
 import javafx.application.Platform;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -36,7 +36,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -173,6 +179,8 @@ public class DashboardController {
         colCategoryIsDefault.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().isDefault()));
         colCategoryCreatedAt.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().getCreatedAt()));
 
+        // Initialize Weka Predictor at startup using your provided method
+        WekaPredictor.initialize(); // Calls the initialize() method in your WekaPredictor
 
         // Initial refresh
         refreshDashboard();
@@ -189,7 +197,7 @@ public class DashboardController {
     /**
      * Refreshes all data displayed on the dashboard, including tables, summaries, and charts.
      */
-    public void refreshDashboard() { // Changed from private to public
+    public void refreshDashboard() {
         if (currentUser == null) return;
 
         Tab selectedTab = dashboardTabPane.getSelectionModel().getSelectedItem();
@@ -198,7 +206,7 @@ public class DashboardController {
         // These are typically on the Overview tab, but if the user switches quickly,
         // it's good to ensure they are updated when any tab is loaded.
         updateFinancialSummary();
-        updatePredictedExpenses();
+        updatePredictedExpenses(); // This now relies on the pre-loaded models from WekaPredictor
         updateCharts();
 
         if ("Transactions List".equals(tabText)) {
@@ -559,12 +567,12 @@ public class DashboardController {
     /**
      * Uses Weka to predict next month's expenses for each category and displays them.
      * Also calculates the total predicted expense.
+     * This method now uses the pre-trained model loaded by WekaPredictor.initialize().
      */
     private void updatePredictedExpenses() {
         predictedExpensesVBox.getChildren().clear(); // Clear previous predictions
         double overallPredictedExpense = 0.0;
 
-        // Get all unique expense categories for the current user (Category objects now)
         List<Category> expenseCategories = categoryDAO.getCategoriesByUserIdAndType(currentUser.getUserId(), "Expense");
 
         if (expenseCategories.isEmpty()) {
@@ -575,17 +583,26 @@ public class DashboardController {
 
         predictedExpensesVBox.getChildren().add(new Label("By Category:"));
         for (Category category : expenseCategories) {
-            // Retrieve last 3 months of spending for this category.
-            // The list is ordered oldest to most recent by getHistoricalMonthlySpendingForCategory.
+            // Retrieve last 3 months of spending for this specific category for prediction input.
+            // getHistoricalMonthlySpendingForCategory returns [M3, M2, M1] (oldest to most recent).
             List<Double> historicalData = transactionDAO.getHistoricalMonthlySpendingForCategory(currentUser.getUserId(), category.getCategoryId(), 3);
 
-            // Ensure we have at least 3 data points, padding with 0.0 if not enough history
-            double m3 = historicalData.size() >= 1 ? historicalData.get(0) : 0.0; // Oldest of the 3
-            double m2 = historicalData.size() >= 2 ? historicalData.get(1) : 0.0; // Middle
-            double m1 = historicalData.size() >= 3 ? historicalData.get(2) : 0.0; // Most recent
+            // Ensure we have exactly 3 data points, padding with 0.0 if not enough history
+            // The `getHistoricalMonthlySpendingForCategory` already pads to `monthsBack`
+            // and returns in order (oldest to most recent).
+            double m3_oldest = historicalData.size() >= 3 ? historicalData.get(0) : 0.0;
+            double m2_middle = historicalData.size() >= 3 ? historicalData.get(1) : 0.0;
+            double m1_mostRecent = historicalData.size() >= 3 ? historicalData.get(2) : 0.0;
 
-            // Predict using Weka. WekaPredictor.predictNextMonthExpense takes (categoryName, m1, m2, m3) where m1 is most recent.
-            double predictedAmount = WekaPredictor.predictNextMonthExpense(category.getCategoryName(), m1, m2, m3);
+            // Predict using Weka. Your WekaPredictor.predictNextMonthExpense expects parameters
+            // (category, PastSpendingM1, PastSpendingM2, PastSpendingM3)
+            // where PastSpendingM1 is the most recent (M1), PastSpendingM2 is M2, PastSpendingM3 is M3.
+            double predictedAmount = WekaPredictor.predictNextMonthExpense(
+                    category.getCategoryName(),
+                    m1_mostRecent,    // This corresponds to PastSpendingM1 in WekaPredictor
+                    m2_middle,        // This corresponds to PastSpendingM2 in WekaPredictor
+                    m3_oldest         // This corresponds to PastSpendingM3 in WekaPredictor
+            );
 
             predictedAmount = Math.max(0, predictedAmount); // Ensure prediction is not negative
             overallPredictedExpense += predictedAmount;
