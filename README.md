@@ -5,10 +5,12 @@ This is a desktop application developed with JavaFX that provides a comprehensiv
 
 ## Features
 User Authentication: Secure Login and Signup functionalities.
+Multi-User Support: Each user has their own private financial data.
+
 ![User Signup](demo/signup.png)
+
 ![User Login](demo/login.png)
 
-Multi-User Support: Each user has their own private financial data.
 
 ## Dashboard Overview:
 
