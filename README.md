@@ -42,7 +42,7 @@ Assign transactions to specific accounts and categories.
 Set monthly budget limits for specific expense categories.
 Track spending against budgets with real-time status updates (On Track, Nearing Limit, Over Budget).
 
-![Budegting](demo/budegting.png)
+![Budegting](demo/budgeting.png)
 
 
 ## Account Management:
