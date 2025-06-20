@@ -5,8 +5,8 @@ This is a desktop application developed with JavaFX that provides a comprehensiv
 
 ## Features
 User Authentication: Secure Login and Signup functionalities.
-![User Signup](SmartFin/demo/Screenshot 2025-06-20 091158.png)
-![User Login](images/dashboard-collage.png)
+![User Signup](SmartFin/demo/signup)
+![User Login](SmartFin/demo/login)
 
 Multi-User Support: Each user has their own private financial data.
 
