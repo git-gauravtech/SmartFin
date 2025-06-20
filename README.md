@@ -4,7 +4,8 @@
 This is a desktop application developed with JavaFX that provides a comprehensive solution for personal finance management. It allows users to track income and expenses, set budgets, manage multiple accounts and custom categories, visualize financial data through interactive charts, and even predict future expenses using AI (Weka). The system also includes an administrator panel for user management and global application insights.
 
 ## Features
-User Authentication: Secure Login and Signup functionalities.
+
+## User Authentication: Secure Login and Signup functionalities.
 Multi-User Support: Each user has their own private financial data.
 
 ![User Signup](demo/signup.png)
