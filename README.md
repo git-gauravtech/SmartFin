@@ -1,20 +1,22 @@
-                                                     AI-Based Personal Finance Management System
+# AI-Based Personal Finance Management System
 
-Project Overview
+## Project Overview
 This is a desktop application developed with JavaFX that provides a comprehensive solution for personal finance management. It allows users to track income and expenses, set budgets, manage multiple accounts and custom categories, visualize financial data through interactive charts, and even predict future expenses using AI (Weka). The system also includes an administrator panel for user management and global application insights.
 
-Features
+## Features
 User Authentication: Secure Login and Signup functionalities.
+![User Signup](demo img/Screenshot 2025-06-20 091158.png)
+![User Login](images/dashboard-collage.png)
 
 Multi-User Support: Each user has their own private financial data.
 
-Dashboard Overview:
+## Dashboard Overview:
 
 Current month's total income, expenses, and net balance.
 
 AI-powered prediction of next month's expenses by category.
 
-Interactive charts:
+## Interactive charts:
 
 Pie Chart: Breakdown of expenses by category.
 
@@ -22,45 +24,45 @@ Bar Chart: Monthly expense comparison over time.
 
 Line Chart: Expense trends over time.
 
-Transaction Management:
+## Transaction Management:
 
 Add, Edit, and Delete financial transactions.
 
 Assign transactions to specific accounts and categories.
 
-Budgeting:
+## Budgeting:
 
 Set monthly budget limits for specific expense categories.
 
 Track spending against budgets with real-time status updates (On Track, Nearing Limit, Over Budget).
 
-Account Management:
+## Account Management:
 
 Add, Edit, and Delete multiple financial accounts (e.g., Checking, Savings, Credit Card, Cash).
 
 View current balances for each account.
 
-Category Management:
+## Category Management:
 
 Create, Edit, and Delete custom income and expense categories.
 
 System-defined default categories.
 
-Administrator Panel:
+## Administrator Panel:
 
 Dedicated dashboard for admin users (gaurav).
 
-User Management: Register new admins, toggle user admin status, delete users (with associated data cleanup).
+### User Management: Register new admins, toggle user admin status, delete users (with associated data cleanup).
 
-Global Data View: View all transactions and budgets across all users.
+### Global Data View: View all transactions and budgets across all users.
 
-Global Statistics: Overall application metrics like total users, total transactions, aggregated income/expenses, and top expense categories across the entire user base.
+### Global Statistics: Overall application metrics like total users, total transactions, aggregated income/expenses, and top expense categories across the entire user base.
 
 Responsive UI: Layouts designed to adapt and scroll to prevent crowding.
 
 Currency Support: Displays amounts in Indian Rupees (₹).
 
-Technologies Used
+## Technologies Used
 Backend & UI: Java 17+ (or compatible JDK version)
 
 Framework: JavaFX
@@ -71,7 +73,7 @@ AI/Machine Learning: Weka 3.8.6 (or compatible version)
 
 Dependency Management: Standard Java JARs (managed manually or via build tool like Maven/Gradle if implemented, currently manual for simplicity)
 
-Prerequisites
+## Prerequisites
 Before you begin, ensure you have the following installed:
 
 Java Development Kit (JDK): Version 17 or higher.
@@ -90,7 +92,7 @@ IntelliJ IDEA (Recommended IDE): Community or Ultimate edition.
 
 Download IntelliJ IDEA
 
-Setup Instructions
+## Setup Instructions
 1. Project Structure
 Ensure your project structure matches the following (or similar if using a build tool):
 
@@ -160,7 +162,7 @@ Crucial: First, drop any existing database named finance_app_db to ensure a clea
 3. Configure External Libraries (JARs) in IntelliJ IDEA
 Your project needs the MySQL Connector, Weka, and potentially JavaFX Font-Glyphs (if you reverted to using icons instead of text buttons).
 
-Download JARs:
+### Download JARs:
 
 MySQL Connector: https://dev.mysql.com/downloads/connector/j/ (Download the Platform Independent ZIP/TAR.GZ, extract, find the .jar file, e.g., mysql-connector-java-8.0.28.jar).
 
@@ -197,7 +199,7 @@ Run Main.java: Locate src/main/java/com/financeapp/Main.java. Right-click on it 
 
 The application's login screen should now appear.
 
-Testing as a Regular User (abc)
+## Testing as a Regular User (abc)
 Login
 Dashboard - Overview Tab:
 
@@ -270,39 +272,5 @@ Test scrollability on this tab if the window is smaller.
 
 Logout: Click the "Logout" button.
 
-Troubleshooting
-java.sql.SQLException: Communications link failure / Access denied for user...:
 
-Ensure your MySQL server is running.
-
-Verify the database name (finance_app_db) is correct.
-
-Check username (root) and password in src/main/java/com/financeapp/dao/DatabaseConnection.java. Update if necessary.
-
-Class Not Found / package ... does not exist errors related to MySQL or Weka:
-
-Double-check that you have downloaded the correct JAR files for MySQL Connector and Weka.
-
-Ensure these JARs are placed in your lib/ folder.
-
-Crucially, verify that you have added these JARs to your IntelliJ project's Module Dependencies (File > Project Structure > Modules > Dependencies).
-
-package de.jensd.fx.glyphs.fontawesome does not exist or cannot find symbol FontAwesomeIconView:
-
-If you are not using the alternative text-based show/hide buttons, ensure fx-glyphs-fontawesome-8.0.7.jar is downloaded, correctly named, placed in lib/, and added to IntelliJ's module dependencies.
-
-If you are using the alternative, make sure you have used the latest FXML and Java files for Login/Signup controllers that do not reference FontAwesome.
-
-Empty Tables or Charts, or Incorrect Data:
-
-Most common cause: The sql/schema.sql was not fully or correctly executed. Drop your database again (DROP DATABASE IF EXISTS finance_app_db;) and re-run the entire schema.sql script.
-
-Ensure there are no errors in your IntelliJ console related to SQL queries.
-
-Overlapping UI elements / Crowded views:
-
-Ensure you are using the latest Dashboard.fxml and AdminDashboard.fxml files provided in the last few responses, which include ScrollPane elements and updated GridPane constraints to improve layout.
-
-Perform a Build > Clean Project and Build > Rebuild Project in IntelliJ.
-
-Feel free to reach out if you encounter any specific issues!
+## Feel free to reach out if you encounter any specific issues!
