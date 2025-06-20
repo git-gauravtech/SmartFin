@@ -10,7 +10,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" exported="" name="lib" level="project" />
     <orderEntry type="library" exported="" name="lib2" level="project" />
-    <orderEntry type="library" exported="" name="bounce-0.18" level="project" />
     <orderEntry type="library" exported="" name="mtj-0.9.13" level="project" />
+    <orderEntry type="library" exported="" name="bounce-0.18" level="project" />
   </component>
 </module>

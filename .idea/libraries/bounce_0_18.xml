@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="bounce-0.18">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../bounce-0.18.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/bounce-0.18.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
