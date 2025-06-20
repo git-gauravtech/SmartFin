@@ -15,8 +15,10 @@ Multi-User Support: Each user has their own private financial data.
 ## Dashboard Overview:
 
 Current month's total income, expenses, and net balance.
-
 AI-powered prediction of next month's expenses by category.
+
+![User Dashboard](demo/dashboard.png)
+
 
 ## Interactive charts:
 
@@ -29,26 +31,33 @@ Line Chart: Expense trends over time.
 ## Transaction Management:
 
 Add, Edit, and Delete financial transactions.
-
 Assign transactions to specific accounts and categories.
+
+![Transactions](demo/transactions.png)
+
 
 ## Budgeting:
 
 Set monthly budget limits for specific expense categories.
-
 Track spending against budgets with real-time status updates (On Track, Nearing Limit, Over Budget).
+
+![Budegting](demo/budegting.png)
+
 
 ## Account Management:
 
 Add, Edit, and Delete multiple financial accounts (e.g., Checking, Savings, Credit Card, Cash).
-
 View current balances for each account.
+
+![Accounts](demo/accounts.png)
 
 ## Category Management:
 
 Create, Edit, and Delete custom income and expense categories.
-
 System-defined default categories.
+
+![Categories](demo/category.png)
+
 
 ## Administrator Panel:
 
@@ -56,9 +65,20 @@ Dedicated dashboard for admin users (gaurav).
 
 ### User Management: Register new admins, toggle user admin status, delete users (with associated data cleanup).
 
+![User Management](demo/userm.png)
+
+
 ### Global Data View: View all transactions and budgets across all users.
 
+![Global transaction](demo/ut.png)
+
+![Global Budegts](demo/abudget.png)
+
+
 ### Global Statistics: Overall application metrics like total users, total transactions, aggregated income/expenses, and top expense categories across the entire user base.
+
+![Global statstics](demo/statstics.png)
+
 
 Responsive UI: Layouts designed to adapt and scroll to prevent crowding.
 
@@ -96,63 +116,9 @@ Download IntelliJ IDEA
 
 ## Setup Instructions
 1. Project Structure
-Ensure your project structure matches the following (or similar if using a build tool):
+  download the .zip file or clone the project from repo.
 
-FinanceManagementSystem/
-├── lib/
-│   ├── mysql-connector-java-8.0.28.jar  # (Or your specific MySQL Connector version)
-│   ├── weka-stable-3.8.6.jar            # (Or your specific Weka version)
-│   └── fx-glyphs-fontawesome-8.0.7.jar  # (OPTIONAL: Only if you want font-based icons, else use simple buttons)
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── com/
-│       │       └── financeapp/
-│       │           ├── Main.java
-│       │           ├── controller/
-│       │           │   ├── AccountFormController.java
-│       │           │   ├── AdminDashboardController.java
-│       │           │   ├── BudgetFormController.java
-│       │           │   ├── CategoryFormController.java
-│       │           │   ├── DashboardController.java
-│       │           │   ├── LoginController.java
-│       │           │   ├── SignupController.java
-│       │           │   └── TransactionFormController.java
-│       │           ├── dao/
-│       │           │   ├── AccountDAO.java
-│       │           │   ├── BudgetDAO.java
-│       │           │   ├── CategoryDAO.java
-│       │           │   ├── DatabaseConnection.java
-│       │           │   ├── TransactionDAO.java
-│       │           │   └── UserDAO.java
-│       │           ├── model/
-│       │           │   ├── Account.java
-│       │           │   ├── Budget.java
-│       │           │   ├── Category.java
-│       │           │   ├── Transaction.java
-│       │           │   └── User.java
-│       │           └── utils/
-│       │               ├── AlertUtil.java
-│       │               ├── SessionManager.java
-│       │               └── WekaPredictor.java
-│       └── resources/
-│           ├── com/
-│           │   └── financeapp/
-│           │       └── view/
-│           │           ├── AccountForm.fxml
-│           │           ├── AdminDashboard.fxml
-│           │           ├── BudgetForm.fxml
-│           │           ├── CategoryForm.fxml
-│           │           ├── Dashboard.fxml
-│           │           ├── Login.fxml
-│           │           ├── Signup.fxml
-│           │           └── TransactionForm.fxml
-│           └── css/
-│               └── styles.css
-└── sql/
-    └── schema.sql
-
-2. Database Setup
+3. Database Setup
 Start MySQL Server.
 
 Open MySQL Workbench (or your preferred MySQL client).
